@@ -44,6 +44,58 @@ void usage() {
 	printf("Usage ./lab3 send | ./lab3 recv\n");
 }
 
+int receiver() {
+	while (true) {
+		uint8_t enc_ph[sizeof(struct lab3_pkthdr) * 2];
+		struct lab3_pkthdr ph;
+
+		fread(enc_ph, 1, sizeof(enc_ph), stdin);
+		if (feof(stdin))
+			return 0;
+
+		hamming_decode(enc_ph, sizeof(enc_ph), (void *) &ph);
+
+		uint8_t *enc_payload = malloc(ph.len * 2);
+		if (enc_payload == NULL)
+			return -1;
+
+		char *payload = malloc(ph.len);
+		if (payload == NULL)
+			return -1;
+
+		fread(enc_payload, 1, ph.len * 2, stdin);
+		if (feof(stdin))
+			return 0;
+
+		hamming_decode(enc_payload, ph.len * 2, (void *) payload);
+
+		bool sum_ok = inet_csum((void *) payload, ph.len) == ph.sum;
+
+		printf("len=%lu; sum(%s)=0x%04hx; payload=\"%s\";\n", ph.len, sum_ok ? "GOOD" : "BAD", ph.sum, payload);
+	}
+}
+
+int sender() {
+	while (true) {
+		uint8_t buf[1024];
+		struct lab3_pkthdr *ph = (void *) buf;
+		char *payload = (void *) buf + sizeof(struct lab3_pkthdr);
+
+		if (fgets(payload, sizeof(buf) - sizeof(struct lab3_pkthdr), stdin) == NULL)
+			return 0;
+
+		ph->len = strlen(payload) - 1;
+		ph->sum = inet_csum((void *) payload, ph->len);
+
+		uint8_t enc[2 * (sizeof(struct lab3_pkthdr) + ph->len)];
+		hamming_encode(buf, sizeof(enc) / 2, enc);
+		if (fwrite(enc, 1, sizeof(enc), stdout) != sizeof(enc))
+			return 0;
+
+		fflush(stdout);
+	}
+}
+
 int main(int argc, char **argv) {
 	if (argc != 2) {
 		usage();
@@ -63,53 +115,8 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	if (send) {
-		while (true) {
-			uint8_t buf[1024];
-			struct lab3_pkthdr *ph = (void *) buf;
-			char *payload = (void *) buf + sizeof(struct lab3_pkthdr);
-
-			if (fgets(payload, sizeof(buf) - sizeof(struct lab3_pkthdr), stdin) == NULL)
-				return 0;
-
-			ph->len = strlen(payload) - 1;
-			ph->sum = inet_csum((void *) payload, ph->len);
-
-			uint8_t enc[2 * (sizeof(struct lab3_pkthdr) + ph->len)];
-			hamming_encode(buf, sizeof(enc) / 2, enc);
-			if (fwrite(enc, 1, sizeof(enc), stdout) != sizeof(enc))
-				return 0;
-
-			fflush(stdout);
-		}
-	} else {
-		while (true) {
-			uint8_t enc_ph[sizeof(struct lab3_pkthdr) * 2];
-			struct lab3_pkthdr ph;
-
-			fread(enc_ph, 1, sizeof(enc_ph), stdin);
-			if (feof(stdin))
-				return 0;
-
-			hamming_decode(enc_ph, sizeof(enc_ph), (void *) &ph);
-
-			uint8_t *enc_payload = malloc(ph.len * 2);
-			if (enc_payload == NULL)
-				return -1;
-
-			char *payload = malloc(ph.len);
-			if (payload == NULL)
-				return -1;
-
-			fread(enc_payload, 1, ph.len * 2, stdin);
-			if (feof(stdin))
-				return 0;
-
-			hamming_decode(enc_payload, ph.len * 2, (void *) payload);
-
-			bool sum_ok = inet_csum((void *) payload, ph.len) == ph.sum;
-
-			printf("len=%lu; sum(%s)=0x%04hx; payload=\"%s\";\n", ph.len, sum_ok ? "GOOD" : "BAD", ph.sum, payload);
-		}
-	}
+	if (send)
+		return sender();
+	else
+		return receiver();
 }
