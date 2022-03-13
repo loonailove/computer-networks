@@ -23,23 +23,23 @@ size_t hamming_encode(uint8_t *buf, size_t len, uint8_t *enc) {
 
 
 int main(int argc,char** argv){
-  init(HOST,PORT);
+	init(HOST,PORT);
 
-  /* Look in link_emulator/lib.h for the definition of msg */
-  msg t;
+	/* Look in link_emulator/lib.h for the definition of msg */
+	msg t;
 
-  /* We set the payload */
-  sprintf(t.payload,"Hello World of PC");
-  t.len = strlen(t.payload)+1;
-  /* Add the checksum */
-  t.sum = inet_csum((void *) t.payload, t.len);
+	/* We set the payload */
+	sprintf(t.payload, "Hello World of PC");
+	t.len = strlen(t.payload) + 1;
+	/* Add the checksum */
+	t.sum = inet_csum((void *) t.payload, t.len);
 
-  /* Encode the message with error correction codes */
+	/* Encode the message with error correction codes */
 	uint8_t enc[2 * (sizeof(msg))];
-	hamming_encode(&t, sizeof(enc) / 2, enc);
+	hamming_encode((void *) &t, sizeof(msg), enc);
 
-  /* Send the message */
-  send_message(&enc);
+	/* Send the message */
+	send_message(&enc);
 
-  return 0;
+	return 0;
 }

@@ -19,23 +19,22 @@ size_t hamming_decode(uint8_t *enc, size_t len, uint8_t *buf) {
 }
 
 int main(int argc,char** argv){
-  msg r,t;
-  init(HOST,PORT);
+	msg t;
+	init(HOST,PORT);
 
-  uint8_t enc_ph[sizeof(msg) * 2];
+	uint8_t enc_ph[sizeof(msg) * 2];
 
-  /* Receive the encoded message */
-  if (recv_message(&enc_ph)<0){
-    perror("Receive message");
-    return -1;
-  }
+	/* Receive the encoded message */
+	if (recv_message(&enc_ph) < 0){
+		perror("Receive message");
+		return -1;
+	}
 
 	hamming_decode(enc_ph, sizeof(enc_ph), (void *) &t);
 
-  int sum_ok = inet_csum((void *) t.payload, t.len) == t.sum;
+	int sum_ok = inet_csum((void *) t.payload, t.len) == t.sum;
 
-  printf("len=%lu; sum(%s)=0x%04hx; payload=\"%s\";\n", t.len, sum_ok ? "GOOD" : "BAD", t.sum, t.payload);
+	printf("len=%d; sum(%s)=0x%04hx; payload=\"%s\";\n", t.len, sum_ok ? "GOOD" : "BAD", t.sum, t.payload);
 
-
-  return 0;
+	return 0;
 }

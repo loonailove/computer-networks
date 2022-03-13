@@ -53,7 +53,7 @@ void init(char* remote, int REMOTE_PORT){
   send_message(&m);
 }
 
-int send_message(const msg* m){
+int send_message(const void* m){
   return sendto(s, m, sizeof(msg), 0,(struct sockaddr*) &addr_remote, sizeof(addr_remote));
 }
 
@@ -66,7 +66,7 @@ int send_message(const msg* m){
   return ret;
   }*/
 
-int recv_message(msg* ret){
+int recv_message(void* ret){
   return recvfrom(s, ret, sizeof(msg), 0, NULL, NULL);
 }
 
