@@ -1,15 +1,17 @@
-.PHONY: all
+all: send recv
 
-APP := lab3
-OBJS := lab3.c.o
+link_emulator/lib.o:
+	$(MAKE) -C link_emulator
 
-all: lab3
+send: send.o link_emulator/lib.o common.o
+	gcc -g send.o link_emulator/lib.o common.o -o send
 
-$(APP): $(OBJS)
-	gcc -o $(@) $<
+recv: recv.o link_emulator/lib.o common.o
+	gcc -g recv.o link_emulator/lib.o common.o -o recv
 
-%.c.o: %.c
-	gcc -Wall -Werror -c -o $@ $<
+.c.o:
+	gcc -Wall -g -c $?
 
 clean:
-	rm -f *.o $(APP)
+	$(MAKE) -C link_emulator clean
+	-rm -f *.o send recv
