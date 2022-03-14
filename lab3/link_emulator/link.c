@@ -287,9 +287,9 @@ void* run_forwarding(void* param){
 	//flip a random bit in a randomly chosen byte of the payload
 	int random_byte = rand() % m->len;
 	int random_bit = rand();
-	m->payload[random_byte] ^= (random_bit % 8) << 1;
+	m->payload[random_byte] ^= 1 << (random_bit % 8);
 	if (corrupt2)
-		m->payload[random_byte] ^= ((random_bit + 1) % 8) << 1;
+		m->payload[random_byte] ^= 1 << (random_bit % 8);
       }
       //printf("Enqueue 1.");
       pthread_mutex_lock( &buffer_lock );

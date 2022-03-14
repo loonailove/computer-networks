@@ -12,7 +12,6 @@
 #define PORT 10000
 
 size_t hamming_encode(uint8_t *buf, size_t len, uint8_t *enc) {
-  /* Our encoding doubles the messages size */
 	for (size_t idx = 0; idx < len; idx++) {
 		enc[idx * 2] = hamming_4to7(buf[idx] >> 4);
 		enc[idx * 2 + 1] = hamming_4to7(buf[idx] & 0xf);
@@ -20,6 +19,8 @@ size_t hamming_encode(uint8_t *buf, size_t len, uint8_t *enc) {
 
 	return len * 2;
 }
+
+
 
 int main(int argc,char** argv) {
 	init(HOST,PORT);

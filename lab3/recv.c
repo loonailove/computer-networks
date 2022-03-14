@@ -11,7 +11,6 @@
 
 
 size_t hamming_decode(uint8_t *enc, size_t len, uint8_t *buf) {
-  /* Since we doubled the message when encoding, when decoding we end up with half the buffer */
 	for (size_t idx = 0; idx < (len / 2); idx++) {
 		buf[idx] = hamming_7to4(enc[idx * 2]) << 4;
 		buf[idx] |= hamming_7to4(enc[idx * 2 + 1]);

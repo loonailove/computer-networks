@@ -4,7 +4,7 @@ SPEED=1
 DELAY=1
 LOSS=0
 CORRUPT=100
-CORRUPT2=100
+CORRUPT2=0
 
 {
     pkill -9 link
