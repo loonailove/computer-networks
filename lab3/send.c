@@ -11,6 +11,7 @@
 #define HOST "127.0.0.1"
 #define PORT 10000
 
+/* For each 4 bits we add 3 redundancy bits. We split a byte intwo two */
 size_t hamming_encode(uint8_t *buf, size_t len, uint8_t *enc) {
 	for (size_t idx = 0; idx < len; idx++) {
 		enc[idx * 2] = hamming_4to7(buf[idx] >> 4);
@@ -19,8 +20,6 @@ size_t hamming_encode(uint8_t *buf, size_t len, uint8_t *enc) {
 
 	return len * 2;
 }
-
-
 
 int main(int argc,char** argv) {
 	init(HOST,PORT);
