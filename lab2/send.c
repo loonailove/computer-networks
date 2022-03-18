@@ -7,34 +7,23 @@
 #include <sys/stat.h>
 #include "link_emulator/lib.h"
 
-/* We don't touch this */
 #define HOST "127.0.0.1"
 #define PORT 10000
 
-#define DLE (char)0
-#define STX (char)2
-#define ETX (char)3
-
-/* TODO 2: implement send_frame function */
-
 int main(int argc,char** argv){
-	init(HOST,PORT);
+  init(HOST,PORT);
+  msg t;
 
-	/* Send Hello */
-	send_byte(DLE);
-	send_byte(STX);
-	send_byte('H');
-	send_byte('e');
-	send_byte('l');
-	send_byte('l');
-	send_byte('o');
-	send_byte('!');
+  sprintf(t.payload,"Hello World of PC");
+  t.len = strlen(t.payload)+1;
+  send_message(&t);
 
-	/* TODO 2: call send_frame function with a given string input */
+  if (recv_message(&t)<0){
+    perror("receive error");
+  }
+  else {
+    printf("[%s] Got reply with payload: %s\n",argv[0],t.payload);
+  }
 
-	/* TODO 3: use send_frame to send a structure of type Packet */
-
-	/* TODO 4: send 100 bytes, send 300 bytes, append a timestamp to these frames */	
-	
-	return 0;
+  return 0;
 }

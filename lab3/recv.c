@@ -9,14 +9,9 @@
 #define HOST "127.0.0.1"
 #define PORT 10001
 
-static inline uint8_t hamming_7to4(uint8_t c) {
-	// TODO 3: Implement hamming decoding for one nibble
-	// TODO 4: Implement error correction
-}
 
 size_t hamming_decode(uint8_t *enc, size_t len, uint8_t *buf) {
 	for (size_t idx = 0; idx < (len / 2); idx++) {
-		/* In the encoded message we have to concatenate 4 bits from two different bytes. */
 		buf[idx] = hamming_7to4(enc[idx * 2]) << 4;
 		buf[idx] |= hamming_7to4(enc[idx * 2 + 1]);
 	}
