@@ -54,14 +54,11 @@ int main(int argc, char *argv[])
 		/* Extract the Ethernet header from the packet. Since protocols are stacked, the first header is the ethernet header,
 		 * the next header is at m.payload + sizeof(struct ether_header) */
 		struct ether_header *eth_hdr = (struct ether_header *) m.payload;
+		struct iphdr *ip_hdr = (struct iphdr *)(m.payload + sizeof(struct ether_header));
 
+		/* TODO 3: DONE: Check if this is an IPv4 or IPv6 packet and route accordingly. For now we will drop IPv6 packets and forward only IPv4.*/
 		/* We check if the packet is IPV4. Watch out for the usage of ntohs, why do we need it? Hint: Network Order */
 		if (ntohs(eth_hdr->ether_type) == ETHERTYPE_IP) {
-			
-		}
-
-		/* TODO 3: Check if this is an IPv4 or IPv6 packet and route accordingly. For now we will drop IPv6 packets and forward only IPv4.*/
-
 		/* TODO 4: Check the checksum as required by IPv4  */
 
 		/* TODO 5: Check TTL >= 1 */
@@ -75,5 +72,7 @@ int main(int argc, char *argv[])
 		/* TODO 9: Update the Ethernet addresses */
 
 		/* TODO 10: Forward the pachet to best_route->interface */
+		}
+
 	}
 }
