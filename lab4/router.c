@@ -24,7 +24,7 @@ struct rtable_entry *get_best_route(uint16_t proto, struct in_addr dest_ip, stru
  Returns a pointer (eg. &nei_table[i]) to the best matching neighbor table entry.
  for the given protocol and destination address. Or NULL if there is no matching route.
 */
-struct nei_entry *get_nei_entry(uint16_t proto, struct in_addr dest_ip, struct in6_addr dest_ip6) {
+struct nei_entry *get_nei_entry(uint16_t proto, struct in_addr nei_ip, struct in6_addr nei_ip6) {
     /* TODO 2: Implement the function. We don't use dest_ip6 at this exercise. */
     return NULL;
 }
