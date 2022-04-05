@@ -24,8 +24,8 @@ void send_seq_packet(int sockfd, struct sockaddr_in server_address,
                   (struct sockaddr *)&server_address, sizeof(server_address));
   DIE(rc < 0, "send");
 
-  static int next_seq = 0; // HINT: foloseste variabila asta pentru a retine la
-                           // ce nr  de secventa esti
+  static uint32_t next_seq = 0; // HINT: foloseste variabila asta pentru a retine la
+                                // ce nr  de secventa esti
   int ack;
   rc = recvfrom(sockfd, &ack, sizeof(ack), 0, NULL, NULL);
   if (rc < 0) {
