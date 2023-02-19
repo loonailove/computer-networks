@@ -5,17 +5,34 @@
 #include <fcntl.h>
 #include "link_emulator/lib.h"
 
+/* Do not touch these two */
 #define HOST "127.0.0.1"
 #define PORT 10001
 
 #include "common.h"
-#define DLE (char)0
-#define STX (char)2
-#define ETX (char)3
 
-/* TODO 2: write recv_frame function */
+/* Our unqiue layer 2 ID */
+static int ID = 123131;
+
+/* Function which our protocol implementation will provide to the upper layer. */
+int recv_frame(char *buf, int size)
+{
+	/* TODO 1.1: Call recv_byte() until we receive the frame start
+	 * delimitator. This operation makes this function blocking until it
+	 * receives a frame. */
+
+	/* TODO 2.1: The first two 2 * sizeof(int) bytes represent sender and receiver ID */
+
+	/* TODO 2.2: Check that the frame was sent to me */
+
+	/* TODO 1.2: Read bytes and copy them to buff until we receive the end of the frame */
+
+	/* If everything went well return the number of bytes received */
+	return 0;
+}
 
 int main(int argc,char** argv){
+	/* Do not touch this */
 	init(HOST,PORT);
 
 
@@ -52,12 +69,11 @@ int main(int argc,char** argv){
 	c = recv_byte();
 	printf("%c\n", c);
 
+	/* TODO 1.0: Allocate a buffer and call recv_frame */
 
-	/* TODO 2: Run the receiver until you receive the frame DONE */
 
-	/* TODO 3: receive a frame with a structure of type Pa */
-
-	/* TODO 4: Measure latency in a while loop for any frame that contains a timestamp we receive, print frame_size and latency */
+	/* TODO 3: Measure latency in a while loop for any frame that contains
+	 * a timestamp we receive, print frame_size and latency */
 
 	printf("[RECEIVER] Finished transmission\n");
 	return 0;

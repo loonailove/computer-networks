@@ -13,13 +13,29 @@
 
 /* Here we have the Frame structure */
 #include "common.h"
-#define DLE (char)0
-#define STX (char)2
-#define ETX (char)3
 
-/* TODO 2: implement send_frame function */
+/* Our unqiue layer 2 ID */
+static int ID = 123131;
+
+/* Function which our protocol implementation will provide to the upper layer. */
+int send_frame(char *buf, int size)
+{
+
+	/* TODO 1.1: Create a new frame. */
+
+	/* TODO 1.2: Copy the data from buffer to our frame structure */
+
+	/* TODO 2.1: Set the destination and source */
+
+	/* TODO 1.3: We can cast the frame to a char *, and iterate through sizeof(struct Frame) bytes
+	 calling send_bytes. */
+
+	/* if all went all right, return 0 */
+	return 0;
+}
 
 int main(int argc,char** argv){
+	// Don't touch this
 	init(HOST,PORT);
 
 	/* Send Hello */
@@ -31,12 +47,16 @@ int main(int argc,char** argv){
 	send_byte('l');
 	send_byte('o');
 	send_byte('!');
+	send_byte(DLE);
+	send_byte(ETX);
 
-	/* TODO 2: call send_frame function with a given string input */
+	/* TODO 1.0: Get some input in a buffer and call send_frame with it */
 
-	/* TODO 3: use send_frame to send a structure of type Packet */
+	/* TODO 3.1: Get a timestamp of the current time copy it in the the payload */
 
-	/* TODO 4: send 100 bytes, send 300 bytes, append a timestamp to these frames */	
-	
+	/* TODO 3.0: Upload the maximum size of the payload in Frame to 100, send the frame */
+
+	/* TODO 3.0: Upload the maximum size of the payload in Frame to 300, send the frame */
+
 	return 0;
 }
