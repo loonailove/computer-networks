@@ -175,19 +175,6 @@ def main():
     nm.setup()
     nm.start_router()
 
-    #CLI(net)
-    if nm.run_test('ping'):
-        print('ping PASSED')
-
-    else:
-        print('ping FAILED')
-
-    if nm.run_test('ping6'):
-        print('ping6 PASSED')
-
-    else:
-        print('ping6 FAILED')
-
     CLI(net)
     net.stop()
 
