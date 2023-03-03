@@ -1,3 +1,7 @@
+```bash
+sudo pkill ovs-test
+sudo python3 topo.py
+```
 
 Pachetele primite/trimise de router vor avea urmatorul format:
 
