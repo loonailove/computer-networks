@@ -3,9 +3,8 @@
 #define ETX (char)3
 
 /* Atributul este folosit pentru a anunta compilatorul sa nu alinieze structura */
-__attribute__((packed))
 /* DELIM | DATE | DELIM */
-struct Frame {
+struct __attribute__((packed)) Frame {
     char frame_delim_start[2]; /* DEL STX */
     /* TODO 2: Add source and destination */
     char payload[30];  /* Datele pe care vrem sa le transmitem */
