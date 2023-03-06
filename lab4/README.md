@@ -14,10 +14,10 @@ We have the following API today:
 /* Receives a packet. Returns the interface it has been received from.
 Write to len the total size of the packet (how many bytes in buf are written) */
 /* Blocking function, blocks if there is no packet to be received. */
-int get_packet(char *packet, int *len);
+int recv_from_all_links(char *packet, int *len);
 
 /* Sends a packet on an interface. */
-int send_packet(int interface, char *packet, int len);
+int send_to_link(int interface, char *packet, int len);
 
 /* Write to mac, a uint8_t mac[6] the MAC address of an interface */
 int get_interface_mac(int interface, uint8_t *mac);

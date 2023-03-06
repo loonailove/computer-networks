@@ -23,12 +23,10 @@ struct rtable_entry {
 };
 
 /* Sends a packet on an interface. */
-int send_packet(int interface, char *packet, int len);
+int send_to_link(int interface, char *packet, int len);
 
 /* Receives a packet. Returns the interface it has been received from. */
-int get_packet(char *packet, int *len);
-
-
+int recv_from_all_links(char *packet, int *len);
 
 /* Utility functions below */
 

@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 		/* We call get_packet to receive a packet. get_packet returns
 		the interface it has received the data from. And writes to
 		len the size of the packet. */
-		interface = get_packet(buf, &len);
+		interface = recv_from_all_links(buf, &len);
 		DIE(interface < 0, "get_message");
 		printf("We have received a packet\n");
 		
@@ -76,6 +76,6 @@ int main(int argc, char *argv[])
 		 * address. Use get_interface_mac(m.interface, uint8_t *mac) to
 		 * find the mac address of our interface. */
 		  
-		// Call send_packet(best_router->interface, packet, len);
+		// Call send_to_link(best_router->interface, packet, len);
 	}
 }

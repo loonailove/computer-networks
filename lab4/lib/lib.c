@@ -53,7 +53,7 @@ int socket_receive_message(int sockfd, char *buf, int *len)
 	return 0;
 }
 
-int send_packet(int sockfd, char *buf, int len)
+int send_to_link(int sockfd, char *buf, int len)
 {        
 	/* 
 	 * Note that "buffer" should be at least the MTU size of the 
@@ -62,7 +62,7 @@ int send_packet(int sockfd, char *buf, int len)
 	return write(interfaces[sockfd], buf, len);
 }
 
-int get_packet(char * buf, int *len) {
+int recv_from_all_links(char * buf, int *len) {
 	int res;
 	fd_set set;
 
