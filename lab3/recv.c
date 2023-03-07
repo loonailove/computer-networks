@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #include "common.h"
 #include "link_emulator/lib.h"
 
@@ -23,7 +24,8 @@ int main(int argc,char** argv) {
 		return -1;
 	}
 
-	uint8_t recv_sum = t.hdr.sum;
+	/* We have to convert it to host order */
+	uint8_t recv_sum = ntohl(t.hdr.sum);
 	t.hdr.sum = 0;
 	int sum_ok = (simple_csum((void *) &t, sizeof(struct l3_msg)) == recv_sum);
 	/* TODO 2: Change to crc32 */

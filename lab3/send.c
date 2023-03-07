@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include "common.h"
 #include "link_emulator/lib.h"
+#include <arpa/inet.h>
 
 #define HOST "127.0.0.1"
 #define PORT 10000
@@ -26,7 +27,9 @@ int main(int argc,char** argv) {
 	/* Note that we compute the checksum for both header and data. Thus
 	 * we set the checksum equal to 0 when computing it */
 	t.hdr.sum = 0;
-	t.hdr.sum = simple_csum((void *) &t, sizeof(struct l3_msg));
+
+	/* Since sum is on 32 bits, we have to convert it to network order */
+	t.hdr.sum = htonl(simple_csum((void *) &t, sizeof(struct l3_msg)));
 
 	/* TODO 2.0: Call crc32 function */
 
