@@ -24,21 +24,21 @@ server IP (h2) - 172.160.0.100
 
 ## Usage
 To compile the code
-```
+```bash
 make
 # to create a random file of 1MB called file.bin
 make random_file
 ```
 
 This will create two binaries, to run them:
-```
+```bash
 sudo python3 topo.py
 ```
 It will open several terminals. We will run the client from `h1` and
 the server from `h2`.
 
 To run a benchmark, use:
-```
+```bash
 make run_benchmark
 ```
 
