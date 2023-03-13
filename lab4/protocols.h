@@ -8,8 +8,7 @@ struct  ether_header {
 };
 
 struct iphdr {
-    uint8_t    version:4,// don't care
-        ihl:4;        // don't care
+    uint8_t   ihl:4, version:4;// don't care
     uint8_t    tos;      // don't care
     uint16_t   tot_len;  // don't care
     uint16_t   id;       // don't care
