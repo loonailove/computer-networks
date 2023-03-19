@@ -133,9 +133,6 @@ class NetworkManager(object):
         self.add_nei_entries()
         self.add_default_routes()
 
-    def start_router(self):
-        self.router.cmd("./router > {} 2>&1 &".format(LOGFILE))
-
 def main():
     topo = SingleSwitchTopo(n=N_HOSTS)
     net = Mininet(topo)
@@ -143,7 +140,6 @@ def main():
 
     nm = NetworkManager(net, N_HOSTS)
     nm.setup()
-    nm.start_router()
 
     CLI(net)
     net.stop()

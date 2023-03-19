@@ -31,7 +31,7 @@ int recv_from_all_links(char *packet, int *len);
 /* Utility functions below */
 
 /* Returns the checksum of an IP header */
-uint16_t ip_checksum(void* vdata,size_t length);
+uint16_t ip_checksum(uint16_t *vdata, size_t len);
 
 /* Returns the ip address of a ninterface */
 char *get_interface_ip(int interface);
