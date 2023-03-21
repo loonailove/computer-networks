@@ -1,3 +1,4 @@
+#include <arpa/inet.h> /* ntoh, hton and inet_ functions */
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
