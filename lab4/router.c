@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
 		/* TODO 2.2: Call get_best_route to find the most specific route, continue; (drop) if null */
 
-		/* TODO 2.3: Check TTL >= 1. Update TLL. Update checksum using the incremental forumla  */
+		/* TODO 2.3: Check TTL >= 1. Update TLL. Update checksum  */
 
 		/* TODO 2.4: Update the ethernet addresses. Use get_mac_entry to find the destination MAC
 		 * address. Use get_interface_mac(m.interface, uint8_t *mac) to
