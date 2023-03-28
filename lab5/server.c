@@ -69,7 +69,7 @@ void recv_a_message(int sockfd) {
   /* The info of the who sent the datagram (PORT and IP) */
   struct sockaddr_in client_addr;
   struct seq_udp p;
-  socklen_t clen;
+  socklen_t clen = sizeof(client_addr);
   int rc = recvfrom(sockfd, &p, sizeof(struct seq_udp), 0,
                     (struct sockaddr *)&client_addr, &clen);
 
