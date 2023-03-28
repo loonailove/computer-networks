@@ -9,18 +9,22 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "utils.h"
 
-#define TICK(X) struct timespec X; clock_gettime(CLOCK_MONOTONIC_RAW, &X)
+#define TICK(X)                                                                \
+  struct timespec X;                                                           \
+  clock_gettime(CLOCK_MONOTONIC_RAW, &X)
 
-#define TOCK(X) struct timespec X##_end; clock_gettime(CLOCK_MONOTONIC_RAW, &X##_end); \
-            printf ("Total time = %f seconds\n", \
-            (X##_end.tv_nsec - (X).tv_nsec) / 1000000000.0 + \
-            (X##_end.tv_sec  - (X).tv_sec))
+#define TOCK(X)                                                                \
+  struct timespec X##_end;                                                     \
+  clock_gettime(CLOCK_MONOTONIC_RAW, &X##_end);                                \
+  printf("Total time = %f seconds\n",                                          \
+         (X##_end.tv_nsec - (X).tv_nsec) / 1000000000.0 +                      \
+             (X##_end.tv_sec - (X).tv_sec))
 
 #define SAVED_FILENAME "received_file.bin"
 
@@ -32,12 +36,10 @@ void recv_seq_udp(int sockfd, struct seq_udp *seq_packet) {
   int rc = recvfrom(sockfd, seq_packet, sizeof(struct seq_udp), 0,
                     (struct sockaddr *)&client_addr, &clen);
 
-
-
   int ack = 0;
   // Sending ACK. We model ACK as datagrams with only an int of value 0.
-  rc = sendto(sockfd, &ack, sizeof(ack), 0,
-              (struct sockaddr *)&client_addr, clen);
+  rc = sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&client_addr,
+              clen);
   DIE(rc < 0, "send");
 }
 
@@ -62,12 +64,30 @@ void recv_a_file(int sockfd, char *filename) {
   close(fd);
 }
 
+void recv_a_message(int sockfd) {
+  /* Receive a datagram and send an ACK */
+  /* The info of the who sent the datagram (PORT and IP) */
+  struct sockaddr_in client_addr;
+  struct seq_udp p;
+  socklen_t clen;
+  int rc = recvfrom(sockfd, &p, sizeof(struct seq_udp), 0,
+                    (struct sockaddr *)&client_addr, &clen);
+
+  /* We know it's a string so we print it*/
+  printf("[Server] Received: %s\n", p.payload);
+
+  int ack = 0;
+  // Sending ACK. We model ACK as datagrams with only an int of value 0.
+  rc = sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&client_addr,
+              clen);
+  DIE(rc < 0, "send");
+}
+
 int main(int argc, char *argv[]) {
   int sockfd;
   struct sockaddr_in servaddr;
 
-
-  // for benchmarking 
+  // for benchmarking
   TICK(TIME_A);
 
   // Creating socket file descriptor
@@ -81,7 +101,7 @@ int main(int argc, char *argv[]) {
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
     perror("setsockopt(SO_REUSEADDR) failed");
 
-  // Fill the details on what destination port should the 
+  // Fill the details on what destination port should the
   // datagrams have to be sent to our process.
   memset(&servaddr, 0, sizeof(servaddr));
   servaddr.sin_family = AF_INET; // IPv4
@@ -95,31 +115,12 @@ int main(int argc, char *argv[]) {
   int rc = bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
   DIE(rc < 0, "bind failed");
 
-
-  /* Receive a datagram and send an ACK */
-  /* The info of the who sent the datagram (PORT and IP) */
-  struct sockaddr_in client_addr;
-  struct seq_udp p;
-  socklen_t clen;
-  rc = recvfrom(sockfd, &p, sizeof(struct seq_udp), 0,
-                    (struct sockaddr *)&client_addr, &clen);
-
-  /* We know it's a string so we print it*/
-  printf("[Server] Received: %s\n", p.payload);
-
-
-  int ack = 0;
-  // Sending ACK. We model ACK as datagrams with only an int of value 0.
-  rc = sendto(sockfd, &ack, sizeof(ack), 0,
-              (struct sockaddr *)&client_addr, clen);
-  DIE(rc < 0, "send");
-
-
-  // TODO 1.0: Study the code. Uncoment this to receive a chunk and write it to a file
+  // TODO 1.0: Study the code. Uncoment this to receive a file chuck by chuck
+  // and save it locally
+  recv_a_message(sockfd);
   // recv_a_file(sockfd, SAVED_FILENAME);
 
-
-  /* PRint the runtime of the program */
+  /* Print the runtime of the program */
   TOCK(TIME_A);
 
   return 0;

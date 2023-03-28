@@ -11,19 +11,42 @@
 #include <unistd.h>
 
 #include "common.h"
-#include "utils.h"
 #include "queue.h"
+#include "utils.h"
 
 /* Max size of the datagrams that we will be sending */
 #define CHUNKSIZE 1024
 #define SENT_FILENAME "file.bin"
 #define SERVER_IP "172.16.0.100"
 
-
 /* Queue we will use for datagrams */
 queue datagram_queue;
 
-void send_file(int sockfd, struct sockaddr_in server_address, char *filename) {
+void send_file_start_stop(int sockfd, struct sockaddr_in server_address,
+                          char *filename) {
+
+  int fd = open(filename, O_RDONLY);
+  DIE(fd < 0, "open");
+  int rc;
+
+  while (1) {
+    /* Reads a chunk of the file */
+    struct seq_udp d;
+    int n = read(fd, d.payload, sizeof(d.payload));
+    DIE(n < 0, "read");
+    d.len = n;
+
+    if (n == 0) // end of file
+      break;
+
+    /* TODO 1.2: Send the datagram. */
+
+    /* TODO 1.3: Wait for ACK before moving to the next datagram to send. */
+  }
+}
+
+void send_file_window(int sockfd, struct sockaddr_in server_address,
+                      char *filename) {
 
   int fd = open(filename, O_RDONLY);
   DIE(fd < 0, "open");
@@ -31,31 +54,47 @@ void send_file(int sockfd, struct sockaddr_in server_address, char *filename) {
 
   /* TODO 2.1: Increase window size to a value that optimally uses the link */
   int window_size = 1;
-	
 
   while (1) {
-  /* TODO: 1.1 Read all the data of the and add it as datagrams in datagram_queue */
-  /* Reads the content of a file */
+    /* TODO: 1.1 Read all the data of the and add it as datagrams in
+     * datagram_queue */
+    /* Reads the content of a file */
     struct seq_udp *d = malloc(sizeof(struct seq_udp));
-	  int n = read(fd, d->payload, sizeof(d->payload));
-	  DIE(n < 0, "read");
-	  d->len = n;
-    // queue_enq(datagram_queue, p);
+    int n = read(fd, d->payload, sizeof(d->payload));
+    DIE(n < 0, "read");
+    d->len = n;
+    //queue_enq(datagram_queue, d);
 
-	  if (n == 0) // end of file
-	  break;
+    if (n == 0) // end of file
+      break;
   }
 
   // seq_udp *t = queue_deq(datagram_queue)
-  /* TODO 1.2: Pop the front of the queue, if not empty send the datagram. */
 
-  /* TODO 1.3: Wait for ACK before moving to the next datagram to send. Free the previous
-    datagram on ACK.  */
+  /* TODO 2.2: Send window_size packets from the queue. Don't forget to free the
+   * data. */
 
-  /* TODO 2.2: Send window_size packets from the queue. Don't forget to free the data. */
+  /* TODO 2.2: On ACK, slide the window by popping the queue and sending the
+   * next datagram. */
+}
 
-  /* TODO 2.2: On ACK, slide the window by popping the queue and sending the next datagram. */
+void send_a_message(int sockfd, struct sockaddr_in server_address) {
+  struct seq_udp d;
+  strcpy(d.payload, "Hello world!");
+  d.len = strlen("Hello world!");
 
+  /* Send a UDP datagram. Sendto is implemented in the kernel (network stack of
+   * it), it basically creates a UDP datagram, sets the payload to the data we
+   * specified in the buffer, and the completes the IP header and UDP header
+   * using the sever_address info.*/
+  int rc = sendto(sockfd, &d, sizeof(struct seq_udp), 0,
+                  (struct sockaddr *)&server_address, sizeof(server_address));
+
+  DIE(rc < 0, "send");
+
+  /* Receive the ACK. recvfrom is blocking with the current parameters */
+  int ack;
+  rc = recvfrom(sockfd, &ack, sizeof(ack), 0, NULL, NULL);
 }
 
 int main(int argc, char *argv[]) {
@@ -79,27 +118,12 @@ int main(int argc, char *argv[]) {
   servaddr.sin_port = htons(PORT);
   inet_aton(SERVER_IP, &servaddr.sin_addr);
 
-  struct seq_udp d;
-  strcpy(d.payload, "Hello world!");
-  d.len = strlen("Hello world!");
-
-
-  /* Send a UDP datagram. Sendto is implemented in the kernel (network stack of
-   * it), it basically creates a UDP datagram, sets the payload to the data we
-   * specified in the buffer, and the completes the IP header and UDP header
-   * using the sever_address info.*/
-  rc = sendto(sockfd, &d, sizeof(struct seq_udp), 0,
-                (struct sockaddr *)&servaddr, sizeof(servaddr));
-
-  DIE(rc < 0, "send");
-
-  /* Receive the ACK. recvfrom is blocking with the current parameters */
-  int ack;
-  rc = recvfrom(sockfd, &ack, sizeof(ack), 0, NULL, NULL);
-
-  /* TODO 1.0: comment the previous code and implement send_file using
-   * stop-and-wait aka window size = 1 */
-  //send_file(sockfd, servaddr, SENT_FILENAME);
+  /* TODO: Read the demo function.
+  Implement and test (one at a time) each of the proposed versions for sending a
+  file. */
+  send_a_message(sockfd, servaddr);
+  // send_file_start_stop(sockfd, servaddr, SENT_FILENAME);
+  // send_file_window(sockfd, servaddr, SENT_FILENAME);
 
   close(sockfd);
 
