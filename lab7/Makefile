@@ -3,7 +3,7 @@
 # Echo Server
 # Makefile
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -Werror -Wno-error=unused-variable
 
 # Portul pe care asculta serverul
 PORT = 12345

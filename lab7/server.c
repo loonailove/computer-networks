@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
+#include <poll.h>
 
 #include "helpers.h"
 #include "common.h"
@@ -89,11 +90,12 @@ void run_chat_server(int listenfd)
     close(connfd2);
 }
 
+#define MAX_CONNECTIONS 32
+
 void run_chat_multi_server(int listenfd) {
 
-	fd_set read_fds;	// multimea de citire folosita in select()
-	fd_set tmp_fds;		// multime folosita temporar
-	int fdmax;			// valoare maxima fd din multimea read_fds
+    struct pollfd poll_fds[MAX_CONNECTIONS];
+    int num_clients = 1;
 	int rc;
 
 	struct chat_packet received_packet;
@@ -102,24 +104,18 @@ void run_chat_multi_server(int listenfd) {
 	rc = listen(listenfd, MAX_CLIENTS);
     DIE(rc < 0, "listen");
 
-	// se goleste multimea de descriptori de citire (read_fds) si multimea temporara (tmp_fds)
-	FD_ZERO(&read_fds);
-	FD_ZERO(&tmp_fds);
-
 	// se adauga noul file descriptor (socketul pe care se asculta conexiuni) in multimea read_fds
-	FD_SET(listenfd, &read_fds);
-	fdmax = listenfd;
-
+    poll_fds[0].fd = listenfd;
+    poll_fds[0].events = POLLIN;
 
 	while (1) {
-		tmp_fds = read_fds; 
 		
-		rc = select(fdmax + 1, &tmp_fds, NULL, NULL, NULL);
+		rc = poll(poll_fds, num_clients, 0); 
 		DIE(rc < 0, "select");
 
-		for (int i = 0; i <= fdmax; i++) {
-			if (FD_ISSET(i, &tmp_fds)) {
-				if (i == listenfd) {
+		for (int i = 0; i < num_clients; i++) {
+			if (poll_fds[i].revents & POLLIN) {
+				if (poll_fds[i].fd == listenfd) {
 					// a venit o cerere de conexiune pe socketul inactiv (cel cu listen),
 					// pe care serverul o accepta
 					struct sockaddr_in cli_addr;
@@ -128,10 +124,9 @@ void run_chat_multi_server(int listenfd) {
 					DIE(newsockfd < 0, "accept");
 
 					// se adauga noul socket intors de accept() la multimea descriptorilor de citire
-					FD_SET(newsockfd, &read_fds);
-					if (newsockfd > fdmax) { 
-						fdmax = newsockfd;
-					}
+                    num_clients++;
+                    poll_fds[num_clients].fd = newsockfd;
+                    poll_fds[num_clients].events = POLLIN;
 
 					printf("Noua conexiune de la %s, port %d, socket client %d\n",
 							inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), newsockfd);
@@ -144,15 +139,17 @@ void run_chat_multi_server(int listenfd) {
 					if (rc == 0) {
 						// conexiunea s-a inchis
 						printf("Socket-ul client %d a inchis conexiunea\n", i);
-						close(i);
+						close(poll_fds[i].fd);
 						
-						// se scoate din multimea de citire socketul inchis 
-						FD_CLR(i, &read_fds);
+						// se scoate din multimea de citire socketul inchis
+                        for (int j = i; j < num_clients - 1; j++) {
+                            poll_fds[j] = poll_fds[j + 1];
+                        }
+                         num_clients--;
+
 					} else {
 						printf ("S-a primit de la clientul de pe socketul %d mesajul: %s\n", i, received_packet.message);
                         /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
-
-                        
 					}
 				}
 			}
