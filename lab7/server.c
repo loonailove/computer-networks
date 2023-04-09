@@ -197,8 +197,8 @@ int main(int argc, char *argv[]) {
   rc = bind(listenfd, (const struct sockaddr *)&serv_addr, sizeof(serv_addr));
   DIE(rc < 0, "bind");
 
-  // run_chat_server(listenfd);
-  run_chat_multi_server(listenfd);
+  run_chat_server(listenfd);
+  //run_chat_multi_server(listenfd);
 
   // Ichidem listenfd
   close(listenfd);
