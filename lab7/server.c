@@ -111,7 +111,7 @@ void run_chat_multi_server(int listenfd) {
 	while (1) {
 		
 		rc = poll(poll_fds, num_clients, 0); 
-		DIE(rc < 0, "select");
+		DIE(rc < 0, "poll");
 
 		for (int i = 0; i < num_clients; i++) {
 			if (poll_fds[i].revents & POLLIN) {
@@ -133,7 +133,7 @@ void run_chat_multi_server(int listenfd) {
 				} else {
 					// s-au primit date pe unul din socketii de client,
 					// asa ca serverul trebuie sa le receptioneze
-					int rc = recv_all(i, &received_packet, sizeof(received_packet));
+					int rc = recv_all(poll_fds[i].fd, &received_packet, sizeof(received_packet));
 					DIE(rc < 0, "recv");
 
 					if (rc == 0) {
@@ -149,7 +149,7 @@ void run_chat_multi_server(int listenfd) {
                         num_clients--;
 
 					} else {
-						printf ("S-a primit de la clientul de pe socketul %d mesajul: %s\n", i, received_packet.message);
+						printf ("S-a primit de la clientul de pe socketul %d mesajul: %s\n", poll_fds[i].fd, received_packet.message);
                         /* TODO 2.1: Trimite mesajul catre toti ceilalti clienti */
 					}
 				}
@@ -194,8 +194,8 @@ int main(int argc, char* argv[])
     rc = bind(listenfd, (const struct sockaddr *)&serv_addr, sizeof(serv_addr));
     DIE(rc < 0, "bind");
 
-    run_chat_server(listenfd);
-    //run_chat_multi_server(listenfd);
+    //run_chat_server(listenfd);
+    run_chat_multi_server(listenfd);
 
     // Ichidem listenfd
     close(listenfd);
