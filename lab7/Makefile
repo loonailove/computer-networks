@@ -6,18 +6,20 @@
 CFLAGS = -Wall -g
 
 # Portul pe care asculta serverul
-PORT = 
+PORT = 12345
 
 # Adresa IP a serverului
-IP_SERVER = 
+IP_SERVER = 127.0.0.1
 
-all: server client 
+all: server client
+
+common.o: common.c
 
 # Compileaza server.c
-server: server.c
+server: server.c common.o
 
 # Compileaza client.c
-client: client.c
+client: client.c common.o
 
 .PHONY: clean run_server run_client
 
@@ -30,4 +32,4 @@ run_client:
 	./client ${IP_SERVER} ${PORT}
 
 clean:
-	rm -f server client
+	rm -rf server client *.o *.dSYM
