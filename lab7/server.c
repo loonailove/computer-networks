@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
   run_chat_server(listenfd);
   //run_chat_multi_server(listenfd);
 
-  // Ichidem listenfd
+  // Inchidem listenfd
   close(listenfd);
 
   return 0;
