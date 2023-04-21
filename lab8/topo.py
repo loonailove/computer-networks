@@ -1,20 +1,5 @@
 #!/usr/bin/env python
 
-"""
-The example topology creates a router and three IP subnets:
-
-    - 192.168.1.0/24 (r0-eth1, IP: 192.168.1.1)
-    - 172.16.0.0/12 (r0-eth2, IP: 172.16.0.1)
-    - 10.0.0.0/8 (r0-eth3, IP: 10.0.0.1)
-
-Each subnet consists of a single host connected to
-a single switch:
-
-    r0-eth1 - s1-eth1 - h1-eth0 (IP: 192.168.1.100)
-    r0-eth2 - s2-eth1 - h2-eth0 (IP: 172.16.0.100)
-"""
-
-
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.node import Node
@@ -56,22 +41,17 @@ class NetworkTopo( Topo ):
         h3 = self.addHost( 'h3', ip='182.17.0.100/12',
                            defaultRoute='via 182.17.0.1' )
 
-        # 10 Mbps, 5ms delay, 10% packet loss
+        # TODO: 10 Mbps, 1ms delay, 0 packet loss
         self.addLink( h1, router, intfName1='r0-eth1', bw=10, delay='1ms', loss=0,
                      params1={ 'ip' : '192.168.1.1/24' })  # for clarity
 
-        # 10 Mbps, 5ms delay, 10% packet loss
+        # TODO: 10 Mbps, 5ms delay, 10% packet loss
         self.addLink( h2, router, intfName2='r0-eth2', bw=10, delay='1ms', loss=0,
                       params2={ 'ip' : '172.16.0.1/12' } )
 
-        # 10 Mbps, 5ms delay, 10% packet loss
+        # TODO: 10 Mbps, 5ms delay, 10% packet loss
         self.addLink( h3, router, intfName2='r0-eth3', bw=10, delay='1ms', loss=0,
                       params2={ 'ip' : '182.17.0.1/12' } )
-
-class NetworkManager(object):
-    def __init__(self, net):
-        self.h1 = net.get("h1")
-        self.h2 = net.get("h2")
 
 
 def run():
@@ -80,8 +60,6 @@ def run():
     net = Mininet( topo=topo, link=TCLink,
                    waitConnected=True, controller=None)  # controller is used by s1-s3
     net.start()
-    #print( '*** Routing Table on Router:\n' )
-    #print(net[ 'r0' ].cmd( 'route' ))
 
     net.startTerms()
     CLI( net )
