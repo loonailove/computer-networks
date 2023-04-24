@@ -7,13 +7,14 @@ import numpy as np
 import matplotlib.ticker as ticker
 
 def get_cwnd_throughput(port):
-    result = subprocess.run(["ss", "-tin", f'sport = :{port} or dport = :{port}'], capture_output=True, text=True)
-    output = result.stdout
+    result = subprocess.run(["ss", "-tin", f'sport = :{port} or dport = :{port}'], stdout=subprocess.PIPE)
+    output = result.stdout.decode("utf-8")
     cwnd_regex = re.compile(r"cwnd:(\d+)")
     cwnd = cwnd_regex.findall(output)
-
-    throughput_regex = re.compile(r"send (\d+)bps")
+    
+    throughput_regex = re.compile(r"send (\d+\.?\d+?)M?bps")
     throughput = throughput_regex.findall(output)
+
     return (int(cwnd[0]), float(throughput[0]) / 10**6) if cwnd and throughput else (None, None)
 
 def run_iperf_client(target_ip, port):
