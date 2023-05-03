@@ -57,7 +57,7 @@ char *compute_post_request(char *host, char *url, char* content_type, char **bod
 
     // Step 6: add the actual payload data
     memset(line, 0, LINELEN);
-    compute_message(message, body_data_buffer);
+    strcat(message, body_data_buffer);
 
     free(line);
     return message;
