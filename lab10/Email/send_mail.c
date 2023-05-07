@@ -56,6 +56,25 @@ ssize_t read_line(int sockd, void *vptr, size_t maxlen)
     return n;
 }
 
+int open_connection(char *host_ip, int portno, int ip_type, int socket_type, int flag)
+{
+    struct sockaddr_in serv_addr;
+    int sockfd = socket(ip_type, socket_type, flag);
+    if (sockfd < 0)
+        error("ERROR opening socket");
+
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = ip_type;
+    serv_addr.sin_port = htons(portno);
+    inet_aton(host_ip, &serv_addr.sin_addr);
+
+    /* connect the socket */
+    if (connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
+        error("ERROR connecting");
+
+    return sockfd;
+}
+
 /**
  * Trimite o comanda SMTP si asteapta raspuns de la server. Comanda
  * trebuie sa fie in buffer-ul sendbuf. Sirul expected contine
@@ -98,12 +117,7 @@ int main(int argc, char **argv) {
 
     strncpy(server_ip, argv[1], INET_ADDRSTRLEN);
 
-    // TODO 1: creati socket-ul TCP client
-
-    // TODO 2: completati structura sockaddr_in cu
-    // portul si adresa IP ale serverului SMTP
-        
-    // TODO 3: conectati-va la server
+    // TODO 1: Conecteaza-te la server
 
     // se primeste mesajul de conectare de la server
     read_line(sockfd, recvbuf, MAXLEN -1);
@@ -113,17 +127,17 @@ int main(int argc, char **argv) {
     sprintf(sendbuf, "HELO localhost");
     send_command(sockfd, sendbuf, "250");
 
-    // TODO 4: trimiteti comanda de MAIL FROM
+    // TODO 2: trimiteti comanda de MAIL FROM
 
-    // TODO 5: trimiteti comanda de RCPT TO
+    // TODO 3: trimiteti comanda de RCPT TO
 
-    // TODO 6: trimiteti comanda de DATA
+    // TODO 4: trimiteti comanda de DATA
 
-    // TODO 7: trimiteti e-mail-ul (antete + corp + atasament)
+    // TODO 5: trimiteti e-mail-ul (antete + corp + atasament)
 
-    // TODO 8: trimiteti comanda de QUIT
+    // TODO 6: trimiteti comanda de QUIT
 
-    // TODO 9: inchideti socket-ul TCP client
+    // TODO 7: inchideti socket-ul TCP client
 
     return 0;
 }
