@@ -51,13 +51,13 @@ void run_server(int sockfd) {
 
 uint32_t *obtain_key_plain(int sockfd)
 {
-	// TODO 5. Get the key from Alice.
+	// TODO 1. Get the key from Alice.
 	return NULL;
 }
 
 uint32_t *obtain_key_dh(int sockfd)
 {
-	// TODO 7. Perform DH using the primitives in "include/dh.h". Use derive_key with the
+	// TODO 3. Perform DH using the primitives in "include/dh.h". Use derive_key with the
 	// secret as argument. We do this because the key and the secret don't necessarly have
 	// the same size or structure.
 	return NULL;
@@ -68,12 +68,12 @@ void run_secure_server(int sockfd)
 	int res;
 	struct message msg;
 
-	// TODO 7. Comment this and uncomment the next line
+	// TODO 3. Comment this and uncomment the next line
 	uint32_t *key = obtain_key_plain(sockfd);
 	/*uint32_t *key = obtain_key_dh(sockfd);*/
 
 	while (1) {
-		// TODO 5. just like run_server, receive a message, process it,
+		// TODO 1. just like run_server, receive a message, process it,
 		// then send a reply;
 		// but the incoming message will be encrypted so we need to
 		// decrypt and the outgoing reply needs to be encrypted as well.
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 	int clientfd = accept(listenfd, NULL, NULL);
 	DIE(clientfd == -1, "accept");
 
-	// TODO 5. Comment this and uncomment the next line
+	// TODO 1. Comment this and uncomment the next line
 	run_server(clientfd);
 	/*run_secure_server(clientfd);*/
 

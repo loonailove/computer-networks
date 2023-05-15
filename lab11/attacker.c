@@ -51,7 +51,7 @@ void handle_encrypted_message(int source, char *data, size_t size)
 	switch (source) {
 	case SRC_ALICE:
 		if (!key_retrieved) {
-			// TODO 6. Steal the key from Alice in the first step
+			// TODO 2. Steal the key from Alice in the first step
 			key_retrieved = 1;
 			return;
 		}
@@ -64,7 +64,7 @@ void handle_encrypted_message(int source, char *data, size_t size)
 		printf("Unknown source: %d\n", source);
 	}
 	fflush(stdout);
-	// TODO 6. Use the stolen key to decrypt the intercepted message
+	// TODO 2. Use the stolen key to decrypt the intercepted message
 }
 
 void handle_dh_message(int source, char *data, size_t size)
@@ -80,14 +80,14 @@ void handle_dh_message(int source, char *data, size_t size)
 	switch (source) {
 	case SRC_ALICE:
 		if (!exchange_done) {
-			// TODO 8.1 Intercept Alice's first message.
+			// TODO 4.1 Intercept Alice's first message.
 			// Create your own secret, calculate the shared value
 			// and send it to Bob (by overwriting "data")
 			// Calculate the secret key shared with Alice.
 
 			return;
 		} else {
-			// TODO 8.3 Use the key for Alice to decrypt the
+			// TODO 4.3 Use the key for Alice to decrypt the
 			// message and print it
 			// Then use the key for Bob to encrypt it back and
 			// send it to Bob (overwrite "data")
@@ -96,13 +96,13 @@ void handle_dh_message(int source, char *data, size_t size)
 	break;
 	case SRC_BOB:
 		if (!exchange_done) {
-			// TODO 8.2 Intercept Bob's message.
+			// TODO 4.2 Intercept Bob's message.
 			// send your shared value to Alice (by overwriting "data")
 			// Calculate the secret key shared with Bob.
 			exchange_done = 1;
 			return;
 		} else {
-			// TODO 8.3 Use the key for Bob to decrypt the
+			// TODO 4.3 Use the key for Bob to decrypt the
 			// message and print it
 			// Then use the key for Alice to encrypt it back and
 			// send it to Bob (overwrite "data")
@@ -169,6 +169,7 @@ int main(int argc, char *argv[])
 	DIE(res < 0, "inet_pton");
 	
 
+	/* The code below handles the forwarding between Bob and Alice. */
 	while (1) {
 		struct packet pkt;
 
