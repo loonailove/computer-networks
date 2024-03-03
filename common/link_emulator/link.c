@@ -313,13 +313,13 @@ void *run_forwarding(void *param)
 					m->payload[random_byte] ^=
 						1 << (random_bit2 % 8);
 				}
-				// printf("Enqueue 1.");
-				pthread_mutex_lock(&buffer_lock);
-				enqueue(buffer, m);
-				pthread_cond_signal(&buffer_cond);
-				pthread_mutex_unlock(&buffer_lock);
-				// printf("Done!\n");
 			}
+			// printf("Enqueue 1.");
+			pthread_mutex_lock(&buffer_lock);
+			enqueue(buffer, m);
+			pthread_cond_signal(&buffer_cond);
+			pthread_mutex_unlock(&buffer_lock);
+			// printf("Done!\n");
 		}
 	}
 }
