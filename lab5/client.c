@@ -132,7 +132,8 @@ int main(int argc, char *argv[]) {
   memset(&servaddr, 0, sizeof(servaddr));
   servaddr.sin_family = AF_INET;
   servaddr.sin_port = htons(PORT);
-  inet_aton(SERVER_IP, &servaddr.sin_addr);
+  rc = inet_aton(SERVER_IP, &servaddr.sin_addr);
+  DIE(rc == 0, "Invalid IP address for server");
 
   /* TODO: Read the demo function.
   Implement and test (one at a time) each of the proposed versions for sending a
