@@ -23,9 +23,5 @@ client: client.c include/utils.h lib/queue.o lib/list.o
 random_file:
 	dd if=/dev/urandom of=file.bin bs=1024 count=1000
 
-run_benchmark: server client
-	./server &
-	./client
-
 clean:
 	rm -f server client file.bin received_file.bin *.o include/*.h.gch
