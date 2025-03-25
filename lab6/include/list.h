@@ -1,7 +1,7 @@
 #ifndef _LIST_H_
 #define _LIST_H_
 
-/* List entry */
+// List entry
 struct cel {
   void *info;
   int info_len;
@@ -12,16 +12,16 @@ struct cel {
 
 typedef struct cel list_entry;
 
-/* Window as a list */
+// Window as a list
 typedef struct {
   int size;
   int max_seq;
   list_entry *head;
 } list;
 
-/* Creates a list */
+// Creates a list
 list *create_list();
-/* Adds a segment to the window */
+// Adds a segment to the window
 void add_list_elem(list *window, void *segment, int segment_size, int seq);
 
-#endif /* _LIST_H_ */
+#endif // _LIST_H_

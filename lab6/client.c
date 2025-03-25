@@ -16,7 +16,7 @@
 #include "list.h"
 #include "utils.h"
 
-/* Max size of the datagrams that we will be sending */
+// Max size of the datagrams that we will be sending
 #define CHUNKSIZE MAX_SIZE;
 #define SENT_FILENAME "file.bin"
 #define SERVER_IP "172.16.0.100"
@@ -51,10 +51,10 @@ void send_file_start_stop(int sockfd, struct sockaddr_in server_address,
     d.seq = seq;
     seq++;
 
-    /* TODO 1.1: Send the datagram. */
+    // TODO 1.1: Send the datagram.
 
-    /* TODO 1.2: Wait for ACK before moving to the next datagram to send.
-    If timeout or wrong seq number, resend the datagram. */
+    // TODO 1.2: Wait for ACK before moving to the next datagram to send.
+    // If timeout or wrong seq number, resend the datagram.
 
     if (n == 0) // end of file
       break;
@@ -68,13 +68,13 @@ void send_file_go_back_n(int sockfd, struct sockaddr_in server_address,
   DIE(fd < 0, "open");
   int rc;
 
-  /* TODO 2.1: Increase window size to a value that optimally uses the link */
+  // TODO 2.1: Increase window size to a value that optimally uses the link
   int window_size = 5;
   window->max_seq = 5;
-
+  
+  // Read the entire file in chunks and add them into a list of seq_udp (window)
   int seq = 1;
   while (1) {
-    /* Read the entire file in chunks and add them into a list of seq_udp (window) */
     struct seq_udp *d = malloc(sizeof(struct seq_udp));
     DIE(d == NULL, "malloc");
 
@@ -90,14 +90,14 @@ void send_file_go_back_n(int sockfd, struct sockaddr_in server_address,
       break;
   }
 
-  /* TODO 2.2: Send window_size  packets to the server to saturate the link */
+  // TODO 2.2: Send window_size  packets to the server to saturate the link
 
-  /* In a loop, untill the list of packets is empty */
+  // In a loop, untill the list of packets is empty
 
-  /* TODO 2.2: On ACK remove from the list all the segments that have been ACKed
-          and send the next new segments added to the window */
+  // TODO 2.2: On ACK remove from the list all the segments that have been ACKed
+  //           and send the next new segments added to the window
 
-  /* TODO 2.3: On timeout on recv resend all the segments from the window */
+  // TODO 2.3: On timeout on recv resend all the segments from the window
 }
 
 void send_a_message(int sockfd, struct sockaddr_in server_address) {
@@ -105,38 +105,38 @@ void send_a_message(int sockfd, struct sockaddr_in server_address) {
   strcpy(d.payload, "Hello world!");
   d.len = strlen("Hello world!");
 
-  /* Send a UDP datagram. Sendto is implemented in the kernel (network stack of
-   * it), it basically creates a UDP datagram, sets the payload to the data we
-   * specified in the buffer, and the completes the IP header and UDP header
-   * using the sever_address info.*/
+  // Send a UDP datagram. Sendto is implemented in the kernel (network stack of
+  // it), it basically creates a UDP datagram, sets the payload to the data we
+  // specified in the buffer, and the completes the IP header and UDP header
+  // using the sever_address info.
   int rc = sendto(sockfd, &d, sizeof(struct seq_udp), 0,
                   (struct sockaddr *)&server_address, sizeof(server_address));
 
   DIE(rc < 0, "send");
 
-  /* Receive the ACK. recvfrom is blocking with the current parameters */
+  // Receive the ACK. recvfrom is blocking with the current parameters 
   int ack;
   rc = recvfrom(sockfd, &ack, sizeof(ack), 0, NULL, NULL);
 }
 
 int main(void) {
 
-  /* We use this structure to store the server info. IP address and Port.
-   * This will be written by the UDP implementation into the header */
+  // We use this structure to store the server info. IP address and Port.
+  // This will be written by the UDP implementation on recvfrom().
   struct sockaddr_in servaddr;
   int sockfd, rc;
 
   // for benchmarking
   TICK(TIME_A);
 
-  /* Our transmission window*/
+  // Our transmission window
   window = create_list();
 
   // Creating socket file descriptor. SOCK_DGRAM for UDP
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   DIE(sockfd < 0, "socket");
 
-  /* Set the timeout on the socket */
+  // Set the timeout on the socket
   struct timeval timeout;
   timeout.tv_sec = 0;
   timeout.tv_usec = 250000; // 250ms
@@ -151,9 +151,10 @@ int main(void) {
   servaddr.sin_port = htons(PORT);
   inet_aton(SERVER_IP, &servaddr.sin_addr);
 
-  /* TODO: Read the demo function.
-  Implement and test (one at a time) each of the proposed versions for sending a
-  file. */
+  // TODO: Read the demo function.
+  // Implement and test (one at a time) each of the proposed versions for sending a
+  // file.
+
   send_a_message(sockfd, servaddr);
   // send_file_start_stop(sockfd, servaddr, SENT_FILENAME);
   // send_file_go_back_n(sockfd, servaddr, SENT_FILENAME);
@@ -162,7 +163,7 @@ int main(void) {
 
   free(window);
 
-  /* Print the runtime of the program */
+  // Print the runtime of the program
   TOCK(TIME_A);
 
   return 0;
