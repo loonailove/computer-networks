@@ -51,7 +51,8 @@ int main(int argc,char** argv){
 	c2 = recv_byte();
 
 	/* Cat timp nu am primit DLE STX citim bytes */
-	while((c1 != DLE) && (c2 != STX)) {
+	while(((c1 != DLE) && (c2 != STX)) || (c1 == DLE && c2 != STX)
+        || (c1 != DLE && c2 == STX)) {
 		c1 = c2;
 		c2 = recv_byte();
 	}
