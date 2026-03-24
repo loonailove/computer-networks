@@ -1,0 +1,15 @@
+# detectarea erorilor de transmisie
+
+* schimbarea bitilor dintr-un cadru
+La nivelul legaturii de date,
+	- cadrele pot fi corupte
+	- cadrele pot fi pierdute sau pot aparea cadre neasteptate
+
+1111111 ----------------> 11111110
+	interferente
+	electromagnetice
+
+
+Consideram 2 abordari:
+	- detectarea erorilor si retransmisia (e.g. CRC, Checksums)
+	- corectarea erorilor (e.g. Hamming)

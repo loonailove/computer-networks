@@ -22,5 +22,15 @@ uint32_t crc32(uint8_t *buf, size_t len)
 		/* If the bit is 1, compute the new reminder */
 
 	/* By convention, we negate the crc */
-	return 0;
+	for (size_t i = 0; i < n; i++) {
+		char ch = s[i];
+		for (size_t j = 0; j < 8; j++) {
+			uint32_t b = (ch^crc)&1;
+			crc >>= 1;
+			if (b) crc = crc^0xEDB88320;
+			ch >> = 1;
+		}
+	}
+
+	return ~crc;
 }

@@ -36,7 +36,7 @@ int main(int argc,char** argv) {
 	/* TODO 2.0: Call crc32 function */
 	t.hdr.sum = 0;
 	uint32_t compute_crc = crc32((void *) &t, sizeof(struct 13_msg));
-	t.hdr.sum = htonl(compute_crc);
+	t.hdr.sum = htonl(compute_crc); // hton1 !!
 
 	/* Send the message */
 	link_send(&t, sizeof(struct l3_msg));

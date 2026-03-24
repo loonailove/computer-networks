@@ -30,9 +30,13 @@ int main(int argc,char** argv) {
 
 	/* We have to convert it to host order */
 	uint32_t recv_sum = ntohl(t.hdr.sum);
+	/* zeroing the field */
 	t.hdr.sum = 0;
 	int sum_ok = (simple_csum((void *) &t, sizeof(struct l3_msg)) == recv_sum);
 	/* TODO 2: Change to crc32 */
+	
+	uint32_t compute_crc = crc32((void *) &t, sizeof(struct 13_msg));
+	uint32_t ok_crc = (recv_sum == compute_crc);
 
 	/* Since we are sending messages with a payload of 1500 - sizeof(header), most of the times the bytes from
 	 * 30 - 1500 will be corrupted and thus when we are printing or string message "Hello world" we see no probems.
@@ -48,7 +52,15 @@ int main(int argc,char** argv) {
 
 	/* TODO 3.3: Adjust the corruption rate */
 
+	while(1) {
+		int len = link_recv(&t, sizeof(struct l3_msg));
+		if (len < 0) break;
 
+		uint32_t recv_sum = ntohl(t.hdr.sum);
+		t.hdr.sum = 0;
+
+
+	}
 
 	return 0;
 }
