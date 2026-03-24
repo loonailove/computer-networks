@@ -4,7 +4,7 @@
 
 /* Atributul este folosit pentru a anunta compilatorul sa nu alinieze structura */
 /* DELIM | DATE | DELIM */
-struct __attribute__((packed)) Frame {
+typedef struct __attribute__((packed)) Frame {
     char frame_delim_start[2]; /* DLE STX */
 
     /* TODO 2: Add source and destination */
@@ -13,4 +13,4 @@ struct __attribute__((packed)) Frame {
 
     char payload[100];  /* Datele pe care vrem sa le transmitem */
     char frame_delim_end[2]; /* DLE ETX */
-};
+} Frame;
