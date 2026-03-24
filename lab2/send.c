@@ -1,4 +1,5 @@
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +33,8 @@ int send_frame(char *buf, int size)
 	Frame *frame = (Frame *)malloc(sizeof(struct Frame));
 	memset(frame, 0, sizeof(struct Frame));
 	/* TODO 1.2: Copy the data from buffer to our frame structure */
-	strncpy(frame->payload, buf, size);
+	//strncpy(frame->payload, buf, size);
+	memcpy(frame->payload, buf, size);
 	/* TODO 2.1: Set the destination and source */
 	frame->frame_delim_start[0] = DLE;
 	frame->frame_delim_start[1] = STX;
@@ -80,6 +82,7 @@ int main(int argc,char** argv){
 
 	send_frame(buffer, strlen(buffer));
 	/* TODO 3.1: Get a timestamp of the current time copy it in the the payload */
+	/*
 	time_t currentTime;
 	time(&currentTime);
 
@@ -87,6 +90,13 @@ int main(int argc,char** argv){
 
 	char *timeStr = ctime(&currentTime);	// long int -> string (char *)
 	send_frame(timeStr, strlen(timeStr));
+	*/
+
+	struct timeval t_send;
+	gettimeofday(&t_send, NULL); // luam timpul exact acum
+
+	send_frame((char *)&t_send, sizeof(struct timeval));
+
 	/* TODO 3.0: Update the maximum size of the payload in Frame to 100 (in common.h), send the frame */
 
 	/* TODO 3.0: Update the maximum size of the payload in Frame to 300, send the frame */

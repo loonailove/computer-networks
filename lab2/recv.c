@@ -1,4 +1,6 @@
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -57,10 +59,11 @@ int recv_frame(char *buf, int size)
 	/* TODO 1.2: Read bytes and copy them to buff until we receive the end of the frame */
 
 	// extragem payload-ul si il punem in buffer
-	strncpy(buf, frame.payload, size);
+	//strncpy(buf, frame.payload, size);
+	memcpy(buf, frame.payload, size);
 
 	if (frame.frame_delim_end[0] == DLE && frame.frame_delim_end[1] == ETX) {
-		return strlen(buf); // everything went well
+		return size; // everything went well
 	}
 
 	/* If everything went well return the number of bytes received */
@@ -120,15 +123,29 @@ int main(int argc,char** argv){
 		printf("[RECEIVER] Eroare la primirea cadrului.\n");
 	}
 
-	bytes_received = recv_frame(buffer, 256);
-	if (bytes_received >= 0) {
-		printf("[RECEIVER] Am primit cadrul 2 (Timestamp): %s\n", buffer);
-	}
-
-	free(buffer);
-
 	/* TODO 3: Measure latency in a while loop for any frame that contains
 	 * a timestamp we receive, print frame_size and latency */
+
+	printf("[RECEIVER] Astept cadrul de timestamp...\n");
+
+	int bytes_recv = recv_frame(buffer, sizeof(struct timeval));
+
+	if (bytes_received > 0) {
+		// luam timpul de sosire exact in mom. in care a iesit din recv_frame (T2)
+		struct timeval t_recv;
+		gettimeofday(&t_recv, NULL);
+
+		// timpul de plecare din buffer !!! (T1)
+		struct timeval *t_send = (struct timeval *)buffer;
+		double latency = (t_recv.tv_sec - t_send->tv_sec);
+
+		printf("[LATENȚĂ] Succes! Timpul petrecut de cadru pe rețea a fost: %.3f secunde\n", latency);
+
+		latency *= 1000.0;	// sec -> ms (milisecunde)
+		latency += (t_recv.tv_usec - t_send->tv_usec) / 1000.0;	// microsecunde -> ms (milisecunde)
+
+		printf("[LATENȚĂ] Succes! Timpul petrecut de cadru pe rețea a fost: %.3f milisecunde\n", latency);
+	}
 
 	printf("[RECEIVER] Finished transmission\n");
 	return 0;

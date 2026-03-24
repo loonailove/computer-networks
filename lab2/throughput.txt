@@ -1,0 +1,90 @@
+Super! Hai să transformăm codul tău într-un adevărat instrument de testare a vitezei (un fel de Speedtest în miniatură). 
+
+Pentru a măsura **Throughput-ul** (lățimea de bandă efectivă), trebuie să "inundăm" rețeaua cu foarte multe date. Vom trimite mii de cadre într-o buclă `for`, iar la final vom trimite un mesaj special de stop (ex: "GATA"). Receptorul va porni cronometrul la primul cadru primit și îl va opri când vede mesajul "GATA".
+
+Apoi, aplicăm formula fizicii de clasa a 6-a: **Viteza = Distanța (cantitatea de date) / Timpul**.
+
+Iată cum arată modificările:
+
+### 1. Codul pentru Expeditor (`send.c`)
+Vom trimite 50.000 de cadre pline cu date de test, urmate de mesajul de oprire.
+
+```c
+	/* ... (în main, după ce ai trimis mesajele anterioare) ... */
+
+	printf("[SENDER] Încep testul de Bandwidth (Throughput)...\n");
+
+	// Creăm un buffer plin cu date "dummy" (ex: litera 'A')
+	char dummy_data[100]; 
+	memset(dummy_data, 'A', sizeof(dummy_data));
+
+	int numar_cadre = 50000;
+
+	// Trimitem cele 50.000 de cadre cât de repede putem
+	for (int i = 0; i < numar_cadre; i++) {
+		send_frame(dummy_data, sizeof(dummy_data));
+	}
+
+	// La final, trimitem un cadru special ca să știe receptorul să oprească cronometrul
+	char stop_msg[] = "GATA";
+	send_frame(stop_msg, strlen(stop_msg));
+
+	printf("[SENDER] Am terminat de trimis tot!\n");
+```
+
+### 2. Codul pentru Receptor (`recv.c`)
+Receptorul va aduna câți octeți a primit în total și va măsura timpul scurs între primul și ultimul cadru.
+
+```c
+	/* ... (în main, după ce ai făcut exercițiul cu latența) ... */
+
+	printf("[RECEIVER] Aștept date pentru testul de Bandwidth...\n");
+
+	int total_bytes = 0;
+	struct timeval t_start, t_end;
+	int primul_cadru = 1; // Un "steag" logic ca să știm când am primit prima bucată
+
+	while (1) {
+		int bytes = recv_frame(buffer, 256);
+		if (bytes <= 0) continue;
+
+		// Dacă acesta este ABSOLUT PRIMUL cadru, pornim cronometrul (T1)
+		if (primul_cadru == 1) {
+			gettimeofday(&t_start, NULL);
+			primul_cadru = 0;
+		}
+
+		// Adunăm datele primite la total
+		total_bytes += bytes;
+
+		// Verificăm dacă am primit mesajul "GATA" de la expeditor
+		// Folosim strncmp pentru a verifica doar primele 4 litere
+		if (strncmp(buffer, "GATA", 4) == 0) {
+			gettimeofday(&t_end, NULL); // Oprim cronometrul (T2)
+			break; // Ieșim din bucla while
+		}
+	}
+
+	// 1. Calculăm timpul total de descărcare (în secunde)
+	double timp_total = (t_end.tv_sec - t_start.tv_sec);
+	timp_total += (t_end.tv_usec - t_start.tv_usec) / 1000000.0;
+
+	// 2. Transformăm octeții (bytes) în Megabytes (MB) pentru a fi ușor de citit
+	// 1 MB = 1024 * 1024 octeți
+	double megabytes = (double)total_bytes / (1024.0 * 1024.0);
+
+	// 3. Calculăm Throughput-ul (Viteza = MB / secunde)
+	double throughput = megabytes / timp_total;
+
+	printf("=========================================\n");
+	printf("[THROUGHPUT] Am descărcat %.2f MB în %.3f secunde.\n", megabytes, timp_total);
+	printf("[THROUGHPUT] Viteza rețelei: %.2f MB/s\n", throughput);
+	printf("=========================================\n");
+```
+
+### Ce se va întâmpla când rulezi?
+Expeditorul va arunca pe fir câțiva Megabytes de date. Receptorul le va absorbi, va calcula timpul și îți va afișa viteza efectivă de transfer în **MB/s (Megabytes pe secundă)**. Deoarece folosești emulatorul pe propriul calculator (`127.0.0.1`), viteza va fi probabil uriașă (sute de MB/s), limitată doar de cât de repede procesează procesorul tău bucla `while`.
+
+Rulează-l și scrie-mi ce viteză (MB/s) ai prins!
+
+Ai vrea să discutăm după aceea despre cum putem simula erori pe această rețea (ca și cum am tăia puțin cablul) și cum folosesc calculatoarele "Suma de control" (Checksum) ca să își dea seama că datele s-au corupt?
