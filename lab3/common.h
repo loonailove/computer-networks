@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include "link_emulator/lib.h"
 
+#define ACK "11"
+#define NACK "12"
+
 uint8_t simple_csum(uint8_t *buf, size_t len);
 
 uint32_t crc32(uint8_t *buf, size_t len);
