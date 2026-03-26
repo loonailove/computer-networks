@@ -9,7 +9,7 @@ uint8_t simple_csum(uint8_t *buf, size_t len) {
 		sum += buf[i];
 	}
 
-	return sum;
+	return sum % 256;
 }
 
 uint32_t crc32(uint8_t *buf, size_t len)
@@ -17,20 +17,24 @@ uint32_t crc32(uint8_t *buf, size_t len)
 	/* TODO 2.1: Implement the CRC 32 algorithm */
 
 	/* Iterate through each byte of buff */
-	
+
 		/* Iterate through each bit */
 		/* If the bit is 1, compute the new reminder */
 
 	/* By convention, we negate the crc */
-	for (size_t i = 0; i < n; i++) {
-		char ch = s[i];
-		for (size_t j = 0; j < 8; j++) {
-			uint32_t b = (ch^crc)&1;
-			crc >>= 1;
-			if (b) crc = crc^0xEDB88320;
-			ch >> = 1;
+	uint32_t crc = ~0;	// 0xffffffff -> 11111...11
+	const uint32_t POLY = 0xEDB88320; // CRC-32 checksum (IEE 802.3)
+
+	while(len--) {
+		crc = crc ^ *buf++;
+		/* ^ cycling/iterating through our buffer byte by byte */
+		for (int bit = 0; bit < 8; bit++) {
+			if (crc & 1)
+				crc = (crc >> 1) ^ POLY;
+			else crc = (crc >> 1);
 		}
 	}
 
-	return ~crc;
+	crc = ~crc;	// prin conventie, facem flip la toti biti
+	return crc;
 }

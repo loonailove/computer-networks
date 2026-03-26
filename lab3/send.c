@@ -18,11 +18,10 @@ int main(int argc,char** argv) {
 	init(HOST,PORT);
 
 	/* Look in common.h for the definition of l3_msg */
-	/* the frame, it contains a payload */
 	struct l3_msg t;
 
 	/* We set the payload */
-	sprintf(t.payload, "Hello my World of PC!");
+	sprintf(t.payload, "hii :3!");
 	t.hdr.len = strlen(t.payload) + 1;
 
 	/* Add the checksum */
@@ -31,12 +30,10 @@ int main(int argc,char** argv) {
 	t.hdr.sum = 0;
 
 	/* Since sum is on 32 bits, we have to convert it to network order */
+	/* host order to network order */
 	t.hdr.sum = htonl(simple_csum((void *) &t, sizeof(struct l3_msg)));
 
 	/* TODO 2.0: Call crc32 function */
-	t.hdr.sum = 0;
-	uint32_t compute_crc = crc32((void *) &t, sizeof(struct 13_msg));
-	t.hdr.sum = htonl(compute_crc);
 
 	/* Send the message */
 	link_send(&t, sizeof(struct l3_msg));
