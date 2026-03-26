@@ -13,3 +13,10 @@ La nivelul legaturii de date,
 Consideram 2 abordari:
 	- detectarea erorilor si retransmisia (e.g. CRC, Checksums)
 	- corectarea erorilor (e.g. Hamming)
+
+pkill -9 link; pkill -9 send; pkill -9 recv; sleep 1
+sau ^C emulatorul (raman porturi agatate, procese zombie)
+md5sum file.bin recv.data <- Sunt hash-urile aceleasi?
+1f6788b217767c0969fe1d4551836b1f  file.bin
+1f6788b217767c0969fe1d4551836b1f  recv.data
+./link_emulator/link speed=1 delay=0 loss=30 corrupt=10
