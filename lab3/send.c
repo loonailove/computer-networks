@@ -73,13 +73,25 @@ int main(int argc,char** argv) {
 			t.hdr.sum = htonl(crc32((void *)&t, sizeof(struct l3_msg)));
 			link_send(&t, sizeof(struct l3_msg));
 
+			msg response;	// ca buffer intermediar, copiem datele ulterior
+			int res = recv_message_timeout(&response, 1000);
+
+			// mai intai trebuie sa verificam daca datele s-au pierdut ...
+			if (res < 0) {
+				printf("[SENDER] Timeout expired! Retransmitting chunk...\n");
+				continue; 
+			}
+
+			// ... apoi retrimitem
 			struct l3_msg ack;
-			memset(&ack, 0, sizeof(struct l3_msg));
-			int recv_len = link_recv(&ack, sizeof(struct l3_msg));
+            memcpy(&ack, response.payload, sizeof(struct l3_msg));
+
+			/*
 			if (recv_len != sizeof(struct l3_msg)) {
 				printf("[SENDER] Incomplete ACK, retransmitting...\n");
 				continue;
 			}
+			*/
 
 			uint32_t recv_sum = ntohl(ack.hdr.sum);
 			ack.hdr.sum = 0;
