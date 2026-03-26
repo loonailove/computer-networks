@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include "link_emulator/lib.h"
 
-#define ACK "11"
-#define NACK "12"
+#define MTU 1500
+#define MAX_PAYLOAD 500
 
 uint8_t simple_csum(uint8_t *buf, size_t len);
 
@@ -23,5 +23,5 @@ struct l3_msg {
 
 	/* Note: MTU = 1500 => we can send 1500 - header size bytes of data */
 	/* TODO 3.3: Update this to a higher value based on the MTU */
-	char payload[25];
+	char payload[MAX_PAYLOAD];
 } __attribute__((packed));

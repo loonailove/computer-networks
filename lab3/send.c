@@ -19,6 +19,7 @@ int main(int argc,char** argv) {
 
 	/* Look in common.h for the definition of l3_msg */
 	struct l3_msg t;
+	memset(&t, 0, sizeof(struct l3_msg));
 
 	/* We set the payload */
 	sprintf(t.payload, "i love being a girl!");
@@ -43,6 +44,7 @@ int main(int argc,char** argv) {
 	/* TODO 3.1: Receive the confirmation */
 
 	struct l3_msg ack_packet;
+	memset(&ack_packet, 0, sizeof(struct l3_msg));
 	int res = link_recv(&ack_packet, sizeof(struct l3_msg)); // !!!
 
 	int recv_sum = htonl(ack_packet.hdr.sum);
@@ -58,6 +60,51 @@ int main(int argc,char** argv) {
 	}
 	/* TODO 3.3: Update this to read the content of a file and send it as
 	 * chunks of that file given a MTU of 1500 bytes */
+
+	int fd_in = open("file.bin", O_RDONLY);
+	if (fd_in < 0) { perror("open"); return -1; }
+
+	int bytes_read;
+	while ((bytes_read = read(fd_in, t.payload, MAX_PAYLOAD)) > 0) {
+		t.hdr.len = bytes_read;
+		int success = 0;
+		while (!success) {
+			t.hdr.sum = 0;
+			t.hdr.sum = htonl(crc32((void *)&t, sizeof(struct l3_msg)));
+			link_send(&t, sizeof(struct l3_msg));
+
+			struct l3_msg ack;
+			memset(&ack, 0, sizeof(struct l3_msg));
+			int recv_len = link_recv(&ack, sizeof(struct l3_msg));
+			if (recv_len != sizeof(struct l3_msg)) {
+				printf("[SENDER] Incomplete ACK, retransmitting...\n");
+				continue;
+			}
+
+			uint32_t recv_sum = ntohl(ack.hdr.sum);
+			ack.hdr.sum = 0;
+			// Use the full struct size for ACK CRC (same as receiver)
+			uint32_t computed = crc32((void *)&ack, sizeof(struct l3_msg));
+			if (computed != recv_sum) {
+				printf("[SENDER] Corrupted ACK, retransmitting...\n");
+				continue;
+			}
+
+			if (strncmp(ack.payload, "ACK", 3) == 0) {
+				success = 1;
+				printf("[SENDER] ACK received for chunk\n");
+			} else {
+				printf("[SENDER] NACK received, retransmitting...\n");
+			}
+		}
+	}
+
+
+	t.hdr.len = 0;
+	t.hdr.sum = 0;
+	t.hdr.sum = htonl(crc32((void *)&t, sizeof(struct l3_msg)));
+	link_send(&t, sizeof(struct l3_msg));
+	close(fd_in);
 
 	return 0;
 }

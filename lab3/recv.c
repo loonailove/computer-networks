@@ -27,34 +27,29 @@ int main(int argc,char** argv) {
 	 * This will be visible when we will be sending a file */
 
 	/* TODO 3.1: In a loop, recv a frame and check if the CRC is good */
-	int fd = open("recv.data", O_WRONLY, O_CREAT, O_TRUNC, 0644);
+	int fd = open("recv.data", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd < 0) {
 		printf("Eroare la deschiderea fisierului!\n");
 		return -1;
         }
 
 	while(1) {
-        	struct l3_msg t;
+    	struct l3_msg t;
+		memset(&t, 0, sizeof(struct l3_msg));
 
-        	/* Receive the frame from the link */
-        	int len = link_recv((void *) &t, sizeof(struct l3_msg));
+    	/* Receive the frame from the link */
+        int len = link_recv((void *) &t, sizeof(struct l3_msg));
 		if (len == 0) {
 			printf("[RECV] Toate pachetele au fost primite. Inchidem conexiunea.");
 			break;
 		}
 
-        	int recv_sum = ntohl(t.hdr.sum);
+        int recv_sum = ntohl(t.hdr.sum);
 
-        	// t.hdr.sum = 0;
-        	/* We have to convert it to host order */
-        	/* network order to host order */
-        	// t.hdr.sum = simple_csum((void *) &t, sizeof(struct l3_msg));
-        	// int sum_ok = (t.hdr.sum == recv_sum);
-
-        	/* TODO 2: Change to crc32 */
-        	t.hdr.sum = 0;
-        	t.hdr.sum = crc32((void *) &t, sizeof(struct l3_msg));
-        	int sum_ok = (t.hdr.sum == recv_sum);
+    	/* TODO 2: Change to crc32 */
+        t.hdr.sum = 0;
+    	t.hdr.sum = crc32((void *) &t, sizeof(struct l3_msg));
+    	int sum_ok = (t.hdr.sum == recv_sum);
 
 		// printf("[RECV] len=%d; sum(%s)=0x%04hx; payload=\"%s\";\n", t.hdr.len, sum_ok ? "GOOD" : "BAD", recv_sum, t.payload);
 
