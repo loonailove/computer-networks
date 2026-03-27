@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "lib.h"
 #include "protocols.h"
 
@@ -21,7 +22,16 @@ struct route_table_entry *get_best_route(uint32_t ip_dest) {
 	/* TODO 2.2: Implement the LPM algorithm */
 	/* We can iterate through rtable for (int i = 0; i < rtable_len; i++). Entries in
 	 * the rtable are in network order already */
-	return NULL;
+	struct route_table_entry *best_route = NULL;
+
+	for (int i = 0; i < rtable_len; i++) {
+		if ((ip_dest & rtable[i].mask) == rtable[i].prefix) {
+			if (best_route == NULL || ntohl(rtable[i].mask) > ntohl(best_route->mask)) {
+				best_route = &rtable[i];
+			}
+		}
+	}
+	return best_route;
 }
 
 struct mac_entry *get_mac_entry(uint32_t given_ip) {
@@ -30,6 +40,11 @@ struct mac_entry *get_mac_entry(uint32_t given_ip) {
 
 	/* We can iterate thrpigh the mac_table for (int i = 0; i <
 	 * mac_table_len; i++) */
+	for (int i = 0; i < mac_table_len; i++) {
+		if (mac_table[i].ip == given_ip) {
+			return &mac_table[i];
+		}
+	}
 	return NULL;
 }
 
@@ -40,18 +55,18 @@ int main(int argc, char *argv[])
 	int packet_len;
 
 	/* Don't touch this */
-	init();
+	init(argc - 1, argv + 1);
 
 	/* Code to allocate the MAC and route tables */
-	rtable = malloc(sizeof(struct route_table_entry) * 100);
+	rtable = malloc(sizeof(struct route_table_entry) * 100000);
 	/* DIE is a macro for sanity checks */
 	DIE(rtable == NULL, "memory");
 
-	mac_table = malloc(sizeof(struct  mac_entry) * 100);
+	mac_table = malloc(sizeof(struct mac_entry) * 100);
 	DIE(mac_table == NULL, "memory");
-	
+
 	/* Read the static routing table and the MAC table */
-	rtable_len = read_rtable("rtable.txt", rtable);
+	rtable_len = read_rtable(argv[1], rtable);
 	mac_table_len = read_mac_table(mac_table);
 
 	while (1) {
@@ -61,7 +76,7 @@ int main(int argc, char *argv[])
 		interface = recv_from_all_links(packet, &packet_len);
 		DIE(interface < 0, "get_message");
 		printf("We have received a packet\n");
-		
+
 		/* Extract the Ethernet header from the packet. Since protocols are
 		 * stacked, the first header is the ethernet header, the next header is
 		 * at m.payload + sizeof(struct ether_header) */
@@ -75,15 +90,38 @@ int main(int argc, char *argv[])
 		}
 
 		/* TODO 2.1: Check the ip_hdr integrity using ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)) */
+		uint16_t old_check = ip_hdr->check;
+		ip_hdr->check = 0;
+		if (ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)) != old_check) {
+			continue;
+		}
 
 		/* TODO 2.2: Call get_best_route to find the most specific route, continue; (drop) if null */
+		struct route_table_entry *best_route = get_best_route(ip_hdr->daddr);
+		if (best_route == NULL) {
+			continue;
+		}
 
 		/* TODO 2.3: Check TTL >= 1. Update TLL. Update checksum  */
+		if (ip_hdr->ttl <= 1) {
+			continue;
+		}
+		ip_hdr->ttl--;
+		ip_hdr->check = 0;
+		ip_hdr->check = ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr));
 
 		/* TODO 2.4: Update the ethernet addresses. Use get_mac_entry to find the destination MAC
 		 * address. Use get_interface_mac(m.interface, uint8_t *mac) to
 		 * find the mac address of our interface. */
-		  
+		struct mac_entry *m_entry = get_mac_entry(best_route->next_hop);
+		if (m_entry == NULL) {
+			continue;
+		}
+
+		memcpy(eth_hdr->ether_dhost, m_entry->mac, 6);
+		get_interface_mac(best_route->interface, eth_hdr->ether_shost);
+
 		// Call send_to_link(best_router->interface, packet, packet_len);
+		send_to_link(best_route->interface, packet, packet_len);
 	}
 }

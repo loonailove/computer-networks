@@ -1,0 +1,49 @@
++----+---------------+---------------+---------------+---------------+
+|Word|       1       |       2       |       3       |       4       |
++----+---------------+---------------+---------------+---------------+
+|Byte|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
++----+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   0|Version|  IHL  |Type of Service|          Total Length         |
++----+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   4|         Identification        |Flags|      Fragment Offset    |
++----+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   8|  Time to Live |    Protocol   |         Header Checksum       |
++----+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  12|                       Source Address                          |
++----+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  16|                    Destination Address                        |
++----+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+^ IP header
+
+struct iphdr {
+    // The following syntax means that version has 4 bits and ihl 4 bits.
+    uint8_t    ihl:4, version:4;  // don't care
+    uint8_t    tos;      // don't care
+    uint16_t   tot_len;  // don't care
+    uint16_t   id;       // don't care
+    uint16_t   frag_off; // don't care
+    uint8_t    ttl;      // Time to Live -> to avoid loops, we will decrement
+    uint8_t    protocol; // don't care
+    uint16_t   check;    // checksum     -> Since we modify TTL,
+    // we need to recompute the checksum
+    uint32_t   saddr;    // don't care
+    uint32_t   daddr;    // the destination of the packet
+};
+
+
+we'll work with the following Ethernet header:
+
+Ethernet Frame
+    +-----------------+------------+-------------+
+    |     Bytes 0-5   | Bytes 6-11 | Bytes 12-13 |
+    +------------------------------+-------------+
+    | Destination MAC | Source MAC |  EtherType  |
+    +-----------------+------------+-------------+
+
+
+struct  ether_header {
+    uint8_t  ether_dhost[6];
+    uint8_t  ether_shost[6];
+    uint16_t ether_type;     // ETHERTYPE_IP
+};
