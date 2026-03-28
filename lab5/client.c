@@ -34,61 +34,88 @@
 /* Queue we will use for datagrams */
 queue datagram_queue;
 
-void send_file_start_stop(int sockfd, struct sockaddr_in server_address,
-                          char *filename) {
+/*
+#define _XOPEN_SOURCE_EXTENDED 1
+#include <sys/socket.h>
 
+ssize_t sendto(int socket, const void *buffer, size_t length, int flags,
+               const struct sockaddr *address, size_t address_len);
+
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                 struct sockaddr *src_addr, socklen_t *addrlen);
+ */
+
+void send_file_start_stop(int sockfd, struct sockaddr_in server_address, char *filename) {
   int fd = open(filename, O_RDONLY);
   DIE(fd < 0, "open");
   int rc;
 
   while (1) {
-    /* Reads a chunk of the file */
     struct seq_udp d;
     int n = read(fd, d.payload, sizeof(d.payload));
     DIE(n < 0, "read");
     d.len = n;
 
-    /* TODO 1.2: Send the datagram. */
+    /* Send the datagram */
+    rc = sendto(sockfd, &d, sizeof(d), 0,
+                (struct sockaddr *)&server_address, sizeof(server_address));
+    DIE(rc < 0, "sendto");
 
-    /* TODO 1.3: Wait for ACK before moving to the next datagram to send. */
-    
-    if (n == 0) // end of file
+    /* Wait for ACK */
+    struct seq_udp ack;
+    socklen_t addr_len = sizeof(server_address);
+    rc = recvfrom(sockfd, &ack, sizeof(ack), 0,
+                  (struct sockaddr *)&server_address, &addr_len);
+    DIE(rc < 0, "recvfrom");
+
+    if (n == 0) // Break after sending the 0-length EOF packet
       break;
-
   }
+  close(fd);
 }
 
-void send_file_window(int sockfd, struct sockaddr_in server_address,
-                      char *filename) {
-
+void send_file_window(int sockfd, struct sockaddr_in server_address, char *filename) {
   int fd = open(filename, O_RDONLY);
   DIE(fd < 0, "open");
-  int rc;
 
-  /* TODO 2.1: Increase window size to a value that optimally uses the link */
-  int window_size = 1;
+  /* TODO 2.1: Increase window size. 
+     Optimal window = (Bandwidth * RTT) / PacketSize. Let's try 100 for now. */
+  int window_size = 100; 
 
+  /* 1.1 Read the entire file into the queue first */
   while (1) {
-    /* TODO: 1.1 Read all the data of the and add it as datagrams in
-     * datagram_queue */
-    /* Reads the content of a file */
     struct seq_udp *d = malloc(sizeof(struct seq_udp));
     int n = read(fd, d->payload, sizeof(d->payload));
     DIE(n < 0, "read");
     d->len = n;
-    //queue_enq(datagram_queue, d);
-
-    if (n == 0) // end of file
-      break;
+    queue_enq(datagram_queue, d);
+    if (n == 0) break;
   }
 
-  // seq_udp *t = queue_deq(datagram_queue)
+  /* 2.2: Initial burst - Send the first 'window_size' packets */
+  for (int i = 0; i < window_size && !queue_empty(datagram_queue); i++) {
+    struct seq_udp *to_send = (struct seq_udp *)queue_deq(datagram_queue);
+    sendto(sockfd, to_send, sizeof(struct seq_udp), 0,
+           (struct sockaddr *)&server_address, sizeof(server_address));
+    free(to_send); // Free after sending
+  }
 
-  /* TODO 2.2: Send window_size packets from the queue. Don't forget to free the
-   * data. */
+  /* 2.2: Slide the window. Every time an ACK comes in, send the next packet. */
+  while (!queue_empty(datagram_queue)) {
+    struct seq_udp ack;
+    socklen_t addr_len = sizeof(server_address);
+    
+    // Wait for any ACK
+    recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&server_address, &addr_len);
 
-  /* TODO 2.2: On ACK, slide the window by popping the queue and sending the
-   * next datagram. */
+    // Send the next one to keep the "pipe" full
+    struct seq_udp *next_pkt = (struct seq_udp *)queue_deq(datagram_queue);
+    sendto(sockfd, next_pkt, sizeof(struct seq_udp), 0,
+           (struct sockaddr *)&server_address, sizeof(server_address));
+    free(next_pkt);
+  }
+  
+  close(fd);
 }
 
 void send_a_message(int sockfd, struct sockaddr_in server_address) {

@@ -1,0 +1,78 @@
+# Nivelul Transport
+
+Porturile sunt conceptul ce ne ajută să facem multiplexare între aplicații.
+
+În contextul rețelelor de comunicație, un port este un număr asociat unui socket dintr-un proces (nu unui host). Dacă un proces dorește să comunice cu alte procese, aceasta expune un port, o locație logică prin care accepta conexiuni sau prin care se realizează schimbul de date.
+
+Aceste numere permit aplicațiilor să partajeze concurent resursele de rețea. Serverul de mail, de exemplu, nu așteapta terminarea altor procese ce implica reteaua (ex. web surfing) pentru a putea trimite un mail la destinație.
+
+În antetul protocoalelor de nivel transport, portul este reprezentat pe 2 bytes: uint16_t port;.
+
+portul 21 este rezervat pentru File Transfer Protocol (FTP).
+
+
+
+## TCP header format
+
+0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Source Port          |       Destination Port        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                        Sequence Number                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                    Acknowledgment Number                      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  Data |           |U|A|P|R|S|F|                               |
+| Offset| Reserved  |R|C|S|S|Y|I|            Window             |
+|       |           |G|K|H|T|N|N|                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|           Checksum            |         Urgent Pointer        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                    Options (Variable Length)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             Data                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+^ 7 x 32 de biti = 7 * 4 bytes
+
+Source/Destination Ports (16 bits each): Identify the sending and receiving applications.
+
+Sequence Number (32 bits): Tracks the byte stream position to ensure data arrives in order.
+
+Acknowledgment Number (32 bits): The next byte expected from the sender (valid only if the ACK flag is set).
+
+Data Offset (4 bits): The size of the TCP header in 32-bit words (minimum is 5, or 20 bytes).
+
+Flags (9 bits): * SYN: Synchronize (starts a connection).
+
+ACK: Acknowledgment (confirms receipt).
+
+FIN: Finish (closes a connection).
+
+RST: Reset (aborts a connection).
+
+PSH: Push (sends data to the app immediately).
+
+URG: Urgent (processes urgent data first).
+
+Window (16 bits): Used for flow control; tells the sender how many bytes the receiver is willing to accept.
+
+## UDP
+
+Serviciu neorientat conexiune: nu se stabilește o conexiune între client și server. Așadar, serverul nu va așteapta apeluri de conexiune, ci așteaptă direct datagrame de la clienti. Acest tip de comunicare este întâlnit în sistemele client-server în care se transmit puține mesaje și în general prea rar pentru a menține o conexiune activă între cele două entități.
+
+Nu se garantează ordinea primirii mesajelor și nici corectarea pierderilor pachetelor. UDP-ul se utilizeaza mai ales în rețelele în care există o pierdere foarte mică de pachete și în cadrul aplicatiilor pentru care pierderea unui pachet nu este foarte importantă (Un exemplu: aplicațiile streaming video).
+
+Are un overhead foarte mic, în comparație cu celelalte protocoale de transport (Are un header de 8 bytes, în comparație cu TCP-ul care are minim 20 bytes)
+
+### UDP header (8 bytes)
+
+0      7 8     15 16    23 24    31
++--------+--------+--------+--------+
+|     Source      |   Destination   |
+|      Port       |      Port       |
++--------+--------+--------+--------+
+|     Length      |    Checksum     |
++--------+--------+--------+--------+
+
+

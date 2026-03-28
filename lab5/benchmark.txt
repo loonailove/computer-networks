@@ -1,0 +1,3 @@
+##### Benchmark results #####
+Total time = 0.047410 seconds
+#############################
