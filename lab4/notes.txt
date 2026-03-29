@@ -1,3 +1,12 @@
+|--- Ethernet Header ---|------- IP Header -------|---- Payload (TCP/UDP/ICMP) ----|
+| (14 octeți)           | (minim 20 octeți)      | (restul datelor)               |
+^                       ^                        ^
+|                       |                        |
+packet                  packet + sizeof(ether)   packet + sizeof(ether) + sizeof(ip)
+(eth_hdr)               (ip_hdr)                 (datele efective)
+
+
+
 +----+---------------+---------------+---------------+---------------+
 |Word|       1       |       2       |       3       |       4       |
 +----+---------------+---------------+---------------+---------------+
@@ -47,3 +56,18 @@ struct  ether_header {
     uint8_t  ether_shost[6];
     uint16_t ether_type;     // ETHERTYPE_IP
 };
+
+
+Cand facem conversia??
+[*] ip_hdr->daddr == rtable[i].prefix → NU ai nevoie de conversie.
+[*] ntohl(rtable[i].mask) > ntohl(best_route->mask) → DA, ai nevoie (pentru că compari care mască e "mai mare").
+[*] eth_hdr->ether_type == ntohs(ETHERTYPE_IP) → DA, ai nevoie (pentru că ETHERTYPE_IP este o constantă definită de tine în Host Order și trebuie "tradusă" pentru a se potrivi cu ce a venit de pe cablu).
+
+2. Linia de Asamblare (Pipeline)
+Imaginează-ți o fabrică. Bucla while este banda rulantă:
+Input: Vine un pachet brut (o grămadă de octeți).
+Analiză: Pui "etichetele" (structurile eth_hdr, ip_hdr) ca să înțelegi ce e acolo.
+Filtrare: Verifici dacă e bun (Checksum, TTL, tip IPv4). Dacă e prost, dai continue (arunci piesa de pe bandă).
+Decizie: Te uiți în tabele (Routing, ARP) ca să știi unde să-l trimiți.
+Modificare: Scazi TTL, pui noul MAC de destinație.
+Output: Îl trimiți pe poartă afară cu send_to_link.

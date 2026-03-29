@@ -14,19 +14,6 @@ int rtable_len;
 struct mac_entry *mac_table;
 int mac_table_len;
 
-int comparator(const void *a, const void *b) {
-	struct route_table_entry *entry_a = (struct route_table_entry *)a;
-	struct route_table_entry *entry_b = (struct route_table_entry *)b;
-
-	/* sortam descrescator dupa masca */
-	if (ntohl(entry_a->mask) != ntohl(entry_b->mask)) {
-		return ntohl(entry_b->mask) - ntohl(entry_a->mask);
-	}
-
-	/* daca mastile sunt egale, sortam dupa prefix */
-	return ntohl(entry_b->prefix) - ntohl(entry_a->prefix);
-}
-
 /*
  Returns a pointer (eg. &rtable[i]) to the best matching route, or NULL if there
  is no matching route.
@@ -35,33 +22,16 @@ struct route_table_entry *get_best_route(uint32_t ip_dest) {
 	/* TODO 2.2: Implement the LPM algorithm */
 	/* We can iterate through rtable for (int i = 0; i < rtable_len; i++). Entries in
 	 * the rtable are in network order already */
-
-	/*
 	struct route_table_entry *best_route = NULL;
 
 	for (int i = 0; i < rtable_len; i++) {
-		// iteram prin tabela de rutare
 		if ((ip_dest & rtable[i].mask) == rtable[i].prefix) {
 			if (best_route == NULL || ntohl(rtable[i].mask) > ntohl(best_route->mask)) {
 				best_route = &rtable[i];
 			}
 		}
 	}
-
 	return best_route;
-	*/
-
-	/* sortam tabela de rutare descrescator */
-	/* in acest fel, primul match o sa fie chiar cea mai buna ruta  */
-	qsort((void *) rtable, rtable_len, sizeof(struct route_table_entry), comparator);
-
-	for (int i = 0; i < rtable_len; i++) {
-		if ((ip_dest & rtable[i].mask) == rtable[i].prefix) {
-			return &rtable[i];
-		}
-	}
-
-	return NULL;
 }
 
 struct mac_entry *get_mac_entry(uint32_t given_ip) {
@@ -70,15 +40,11 @@ struct mac_entry *get_mac_entry(uint32_t given_ip) {
 
 	/* We can iterate thrpigh the mac_table for (int i = 0; i <
 	 * mac_table_len; i++) */
-	for (int i = 0;  i < mac_table_len; i++) {
+	for (int i = 0; i < mac_table_len; i++) {
 		if (mac_table[i].ip == given_ip) {
 			return &mac_table[i];
 		}
 	}
-
-	/* given_ip si mac_table[i].ip sunt deja in network order *ambele* */
-	/* deci nu este nevoie sa le convertim */
-
 	return NULL;
 }
 
@@ -89,46 +55,32 @@ int main(int argc, char *argv[])
 	int packet_len;
 
 	/* Don't touch this */
-	init();
+	init(argc - 1, argv + 1);
 
 	/* Code to allocate the MAC and route tables */
-	rtable = malloc(sizeof(struct route_table_entry) * 100);
+	rtable = malloc(sizeof(struct route_table_entry) * 100000);
 	/* DIE is a macro for sanity checks */
 	DIE(rtable == NULL, "memory");
 
-	mac_table = malloc(sizeof(struct  mac_entry) * 100);
+	mac_table = malloc(sizeof(struct mac_entry) * 100);
 	DIE(mac_table == NULL, "memory");
-	
+
 	/* Read the static routing table and the MAC table */
-	rtable_len = read_rtable("rtable.txt", rtable);
+	rtable_len = read_rtable(argv[1], rtable);
 	mac_table_len = read_mac_table(mac_table);
-
-
-	/* while - EVENT LOOP */
-	/* un router nu se opreste niciodata - el exista intr-o stare de asteptare infinita \\
-	pana cand simte un curent electric (biti) pe una din placile sale de retea */
 
 	while (1) {
 		/* We call get_packet to receive a packet. get_packet returns
 		the interface it has received the data from. And writes to
 		len the size of the packet. */
-
-		/* router-ul asteapta sa vina ceva pe oricare dintre porturile (interfetele) sale fizice */
-		/* `recv_from_all_links()` este o functie blocanta
-		in momentul in care un pachet ajunge pe orice cablu conectat la router, functia se deblocheaza
-		si umple buffer-ul 'packet' cu datele primite
-		*/
 		interface = recv_from_all_links(packet, &packet_len);
 		DIE(interface < 0, "get_message");
 		printf("We have received a packet\n");
-		
+
 		/* Extract the Ethernet header from the packet. Since protocols are
 		 * stacked, the first header is the ethernet header, the next header is
 		 * at m.payload + sizeof(struct ether_header) */
-
-		/* extragem primii 14 biti din pachet (eth header) */
 		struct ether_header *eth_hdr = (struct ether_header *) packet;
-		/* extragem header-ul ip */
 		struct iphdr *ip_hdr = (struct iphdr *)(packet + sizeof(struct ether_header));
 
 		/* Check if we got an IPv4 packet */
@@ -138,39 +90,22 @@ int main(int argc, char *argv[])
 		}
 
 		/* TODO 2.1: Check the ip_hdr integrity using ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)) */
-
-		/*
-			[*] deci noi am extras deja header-ul IP, ip_hdr
-			[*] cum verificam integritatea? trebuie ca checksum-ul primit sa fie egal cu \\
-			cel pe care il vom recalcula
-			[*] daca difera, ii dam drop pachetului!!
-		*/
-
-		uint16_t received_check = ip_hdr->check;
+		uint16_t old_check = ip_hdr->check;
 		ip_hdr->check = 0;
-		ip_hdr->check = ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr));
-
-		/* daca datele au fost corupte => DROP */
-		if (ip_hdr->check != received_check) {
+		if (ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)) != old_check) {
 			continue;
 		}
 
-
 		/* TODO 2.2: Call get_best_route to find the most specific route, continue; (drop) if null */
-		/* algoritmul de LPM implementat mai sus */
-
 		struct route_table_entry *best_route = get_best_route(ip_hdr->daddr);
-		/* if `best_route` is NULL (we couldn't find an entry in the route table) => DROP */
 		if (best_route == NULL) {
 			continue;
 		}
 
-		/* TODO 2.3: Check TTL > 1. Update TLL. Update checksum  */
-		if (ip_hdr->ttl < 1) {
-			continue; // DROP
-			/* ideal, ar trebui sa trimitem un ICMP error message */
+		/* TODO 2.3: Check TTL >= 1. Update TLL. Update checksum  */
+		if (ip_hdr->ttl <= 1) {
+			continue;
 		}
-
 		ip_hdr->ttl--;
 		ip_hdr->check = 0;
 		ip_hdr->check = ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr));
@@ -178,22 +113,13 @@ int main(int argc, char *argv[])
 		/* TODO 2.4: Update the ethernet addresses. Use get_mac_entry to find the destination MAC
 		 * address. Use get_interface_mac(m.interface, uint8_t *mac) to
 		 * find the mac address of our interface. */
-
-		/* adresele MAC sunt un array de 6 octeti */
-		struct mac_entry *nexthop = get_mac_entry(best_route->next_hop);
-		if (nexthop == NULL) {
+		struct mac_entry *m_entry = get_mac_entry(best_route->next_hop);
+		if (m_entry == NULL) {
 			continue;
-
-			/* ARP request */
 		}
 
-		uint8_t my_mac[6];
-		get_interface_mac(best_route->interface, my_mac);
-
-		/* acum ramane sa `copiem` adresele MAC in header => cu `memcpy`!!!! */
-		memcpy(eth_hdr->ether_dhost, nexthop->mac, 6);
-		memcpy(eth_hdr->ether_shost, my_mac, 6);
-
+		memcpy(eth_hdr->ether_dhost, m_entry->mac, 6);
+		get_interface_mac(best_route->interface, eth_hdr->ether_shost);
 
 		// Call send_to_link(best_router->interface, packet, packet_len);
 		send_to_link(best_route->interface, packet, packet_len);
