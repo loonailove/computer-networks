@@ -1,0 +1,38 @@
+Da, exact! Este una dintre cele mai fascinante (și vitale) părți din rețelistică. Până acum am presupus că rețeaua noastră este perfectă, dar în lumea reală, cablurile nu sunt perfecte.
+
+### De ce apar erorile?
+Când trimiți date printr-un cablu de cupru sau prin Wi-Fi, trimiți de fapt semnale electrice sau unde radio. Acestea pot fi afectate de zgomot: un cablu îndoit, un fulger afară, sau chiar cineva care pornește un cuptor cu microunde lângă routerul tău. 
+
+Din cauza acestor interferențe electromagnetice, un bit de `1` se poate transforma accidental într-un `0` pe drum. Astfel, tu trimiți textul **"buna"**, dar receptorul primește **"cuna"**.
+
+### Cum își dă seama receptorul că datele s-au stricat?
+Aici intervine **Trailer-ul (Finalul cadrului)** despre care vorbeam chiar la începutul discuției noastre. 
+
+Dacă receptorul nu știe care era mesajul original, cum poate ști că "cuna" e greșit? Răspunsul este matematica: folosim o **Sumă de control (Checksum)** sau un **CRC (Cyclic Redundancy Check)**.
+
+Iată o analogie simplă:
+Imaginează-ți că îți trimit un pachet cu 3 mere, 4 pere și 2 prune. Înainte să sigilez cutia, număr fructele (3+4+2 = 9) și scriu mare pe exteriorul cutiei: **"Total: 9 fructe"**.
+Când primești cutia, tu scoți fructele și le numeri. Dacă pe drum a căzut un măr, tu vei număra 8 fructe. Apoi te uiți pe cutie, vezi că scrie 9, și realizezi instant: *"Aha! Pachetul a fost corupt pe drum!"*.
+
+Ce faci cu pachetul corupt? Îl arunci pur și simplu și îi ceri expeditorului (prin protocoale de nivel superior, cum e TCP) să îl trimită din nou.
+
+### Cum facem asta în cod? (Un Checksum simplu)
+
+Dacă am vrea să adăugăm asta în codul tău, cel mai simplu mod (XOR Checksum) ar funcționa cam așa:
+
+**La Expeditor (`send.c`):**
+1. Se uită la toți octeții din payload-ul tău (literele b, u, n, a).
+2. Face o operație matematică simplă, cum ar fi să le adune valorile numerice (sau să facă un XOR între ele).
+3. Rezultatul acestei matematici (Suma de control) este un număr. Să zicem `0x4A`.
+4. Pune acest `0x4A` în interiorul structurii `Frame`, într-un câmp dedicat (ex: `frame->checksum = 0x4A;`), chiar înainte de delimitatorul de final `DLE ETX`.
+
+**La Receptor (`recv.c`):**
+1. Primește cadrul de pe fir, cu tot cu litere și checksum-ul calculat de expeditor (`0x4A`).
+2. Receptorul **nu are încredere** în datele primite. Așa că ia literele primite și le aplică aceeași formulă matematică (le adună/face XOR).
+3. Verifică rezultatul lui cu cel scris de expeditor. 
+   - Dacă receptorul obține tot `0x4A`, zice: *"Super, datele sunt intacte!"*.
+   - Dacă receptorul obține `0x4B` (pentru că un bit s-a stricat pe drum), zice: *"Eroare! Cadrul e corupt!"* și îi dă `drop` (îl ignoră complet).
+
+În rețelele reale (cum e Ethernet-ul sau Wi-Fi-ul de la tine de acasă), placa de rețea face exact acest calcul matematic (numit **FCS - Frame Check Sequence**) pe hardware, în câteva nanosecunde, pentru *absolut fiecare* cadru pe care îl primești pe internet. Dacă te uiți la un video pe YouTube și câțiva pixeli se corup pe fir, placa ta de rețea aruncă direct cadrul la gunoi înainte ca el să ajungă la browserul tău.
+
+Vrei să îți arăt cum să adaugi un astfel de câmp `checksum` în structura ta `Frame` din `common.h` și să implementăm algoritmul în C ca să vedem cum aruncă un pachet invalid?
