@@ -1,0 +1,28 @@
+
+ICMP = Internet Control Message Protocol
+
+ICMP echo request: ping 192.168.1.1 -> pachetul care trimite comanda ping
+^ sender
+
+ICMP echo reply
+^ receiver
+
+[Ethernet Header][IP Header][ICMP Header][Data]
+[*] pachetul ICMP vine in interiorul pachetului IP
+
+struct icmp_hdr {   /* are exact 8 octeti  */
+    uint8_t type;      // (0 = Reply, 8 = Request, 11 = Time Exceeded)
+    uint8_t code;
+    uint16_t checksum; // checksum for the entire ICMP header
+    
+    uint16_t id;
+    uint16_t sequence;
+} __attribute__((packed));
+
+0 = Reply
+8 = Request
+11 = Time Exceeded
+^ for the type field in the ICMP header
+
+Ethernet Header (14B),IP Header (20B),ICMP Header (8B),ICMP Payload (Date)
+MAC-uri,"IP-uri, TTL, Protocol=1","Type, Code, Checksum",Datele de la Ping
