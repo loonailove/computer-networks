@@ -32,4 +32,4 @@ struct iphdr {
     // we need to recompute the checksum
     uint32_t   saddr;    // don't care
     uint32_t   daddr;    // the destination of the packet
-};
+} __attribute__((packed));

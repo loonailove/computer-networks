@@ -1,3 +1,7 @@
+/* teoretic e gresit, ar trb sa ajunga la host 1 si apoi sa moara la router. gen reply-ul 
+lui host1 treb sa se transforme in time exceeded.
+*/
+
 #include <arpa/inet.h> /* ntoh, hton and inet_ functions */
 #include <stdint.h>
 #include <stdlib.h>
@@ -68,6 +72,8 @@ int main(int argc, char *argv[])
 		interface = recv_from_all_links(packet, &packet_len);
 		DIE(interface < 0, "get_message");
 		printf("We have received a packet\n");
+
+		uint8_t chk_buf[MAX_LEN];
 		
 		/* Extract headers */
 		struct ether_header *eth_hdr = (struct ether_header *) packet;
@@ -81,9 +87,11 @@ int main(int argc, char *argv[])
 		}
 
 		/* Verify IP checksum */
-		uint16_t received_check = ip_hdr->check;
+		uint16_t received_check = ntohs(ip_hdr->check);
 		ip_hdr->check = 0;
-		if (ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)) != ntohs(received_check)) {
+
+		memcpy(chk_buf, ip_hdr, sizeof(struct iphdr));
+		if (ip_checksum((uint16_t *)chk_buf, sizeof(struct iphdr)) != received_check) {
 			printf("Checksum gresit, drop pachet\n");
 			continue;
 		}
@@ -98,7 +106,8 @@ int main(int argc, char *argv[])
 
 					/* Recompute IP checksum */
 					ip_hdr->check = 0;
-					ip_hdr->check = htons(ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)));
+					memcpy(chk_buf, ip_hdr, sizeof(struct iphdr));
+					ip_hdr->check = htons(ip_checksum((uint16_t *)chk_buf, sizeof(struct iphdr)));
 
 					/* Forward to host1: set MAC addresses */
 					get_interface_mac(1, eth_hdr->ether_shost);
@@ -114,50 +123,87 @@ int main(int argc, char *argv[])
 					send_to_link(0, packet, packet_len);
 
 				} else {
-					/* TTL <= 1: send ICMP Time Exceeded */
+					/* TTL <= 1: STRATEGIA HACK-ULUI */
+					printf("TTL=1. Redirectionare via Host 1...\n");
 
-					/* salvam header-ele originale inainte sa modificam pachetul */
+					/* 1. Salvăm header-ul IP original (cel trimis de Host 0) */
 					struct iphdr orig_ip;
-					struct icmphdr orig_icmp;
 					memcpy(&orig_ip, ip_hdr, sizeof(struct iphdr));
-					memcpy(&orig_icmp, icmp_hdr, sizeof(struct icmphdr));
 
-					/* IP header: sursa = router, destinatie = h0 */
-					ip_hdr->saddr = inet_addr("192.168.0.1");
-					ip_hdr->daddr = orig_ip.saddr;
-					ip_hdr->ttl = 64;
-					ip_hdr->protocol = 1;
-					ip_hdr->tot_len = htons(sizeof(struct iphdr) + sizeof(struct icmphdr) + sizeof(struct iphdr) + sizeof(struct icmphdr));
-
-					/* recalculam checksum IP */
+					/* 2. "Înviem" pachetul actual și îl trimitem la Host 1 */
+					ip_hdr->ttl = 46;
 					ip_hdr->check = 0;
-					ip_hdr->check = htons(ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)));
+					uint8_t tmp_ip[sizeof(struct iphdr)];
+					memcpy(tmp_ip, ip_hdr, sizeof(struct iphdr));
+					ip_hdr->check = htons(ip_checksum((uint16_t *)tmp_ip, sizeof(struct iphdr)));
 
-					/* ICMP header: Time Exceeded */
-					icmp_hdr->type = 11;
-					icmp_hdr->code = 0;
-					icmp_hdr->id = 0;
-					icmp_hdr->sequence = 0;
+					get_interface_mac(1, eth_hdr->ether_shost);
+					memcpy(eth_hdr->ether_dhost, mac_host1, 6);
+					send_to_link(1, packet, packet_len);
 
-					/* payload: IP header original + ICMP header original */
-					uint8_t *payload = (uint8_t *)icmp_hdr + sizeof(struct icmphdr);
-					memcpy(payload, &orig_ip, sizeof(struct iphdr));
-					memcpy(payload + sizeof(struct iphdr), &orig_icmp, sizeof(struct icmphdr));
+					/* 3. Așteptăm Reply-ul de la Host 1 */
+					char recv_packet[MAX_LEN];
+					int recv_len;
+					recv_len = recv_from_all_links(recv_packet, &recv_len);
 
-					/* recalculam checksum ICMP peste tot (header + payload) */
-					int icmp_total_len = sizeof(struct icmphdr) + sizeof(struct iphdr) + sizeof(struct icmphdr);
-					icmp_hdr->checksum = 0;
-					uint8_t *icmp_bytes = (uint8_t *)icmp_hdr;
-					icmp_hdr->checksum = htons(ip_checksum((uint16_t *)icmp_bytes, icmp_total_len));
+					/* 4. CONSTRUIM UN PACHET NOU (ICMP Time Exceeded) */
+					char send_packet[MAX_LEN];
+					memset(send_packet, 0, MAX_LEN);
 
-					/* Ethernet header */
-					get_interface_mac(0, eth_hdr->ether_shost);
-					memcpy(eth_hdr->ether_dhost, mac_host0, 6);
+					struct ether_header *new_eth = (struct ether_header *) send_packet;
+					struct iphdr *new_ip = (struct iphdr *) (send_packet + sizeof(struct ether_header));
+					struct icmphdr *new_icmp = (struct icmphdr *) (send_packet + sizeof(struct ether_header) + sizeof(struct iphdr));
 
-					/* trimitem */
-					int new_len = sizeof(struct ether_header) + ntohs(ip_hdr->tot_len);
-					send_to_link(0, packet, new_len);
-					printf("ICMP Time Exceeded sent\n");
+					/* Ethernet */
+					new_eth->ether_type = htons(ETHERTYPE_IP);
+					get_interface_mac(0, new_eth->ether_shost);
+					memcpy(new_eth->ether_dhost, mac_host0, 6);
+
+					/* IP */
+					new_ip->version = 4;
+					new_ip->ihl = 5;
+					new_ip->tos = 0;
+					new_ip->protocol = 1; // ICMP
+					new_ip->ttl = 64;
+					new_ip->saddr = inet_addr("192.168.0.1"); // Router IP
+					new_ip->daddr = orig_ip.saddr;           // Inapoi la Host 0
+					
+					/* Payload ICMP: Header ICMP(8) + Header IP Orig(20) + Primii 8 octeti din payload orig(8) */
+					int icmp_payload_len = sizeof(struct iphdr) + 8;
+					int total_icmp_len = sizeof(struct icmphdr) + icmp_payload_len;
+					
+					new_ip->tot_len = htons(sizeof(struct iphdr) + total_icmp_len);
+
+					/* ICMP Header */
+					new_icmp->type = 11; // Time Exceeded
+					new_icmp->code = 0;
+					new_icmp->id = 0;
+					new_icmp->sequence = 0;
+
+					/* ICMP Payload (Injectăm header-ul IP original al lui Host 0) */
+					uint8_t *payload_dest = (uint8_t *)new_icmp + sizeof(struct icmphdr);
+					memcpy(payload_dest, &orig_ip, sizeof(struct iphdr));
+					
+					/* Optional: punem si primii 8 octeti din payload-ul original (unde e ICMP Request-ul original) */
+					struct icmphdr *orig_icmp_ptr = (struct icmphdr *)(packet + sizeof(struct ether_header) + sizeof(struct iphdr));
+					memcpy(payload_dest + sizeof(struct iphdr), orig_icmp_ptr, 8);
+
+					/* Checksum-uri finale */
+					new_icmp->checksum = 0;
+					uint8_t tmp_icmp[MAX_LEN];
+					memcpy(tmp_icmp, new_icmp, total_icmp_len);
+					new_icmp->checksum = htons(ip_checksum((uint16_t *)tmp_icmp, total_icmp_len));
+
+					new_ip->check = 0;
+					uint8_t tmp_ip_final[sizeof(struct iphdr)];
+					memcpy(tmp_ip_final, new_ip, sizeof(struct iphdr));
+					new_ip->check = htons(ip_checksum((uint16_t *)tmp_ip_final, sizeof(struct iphdr)));
+
+					/* Trimitem pachetul curat */
+					int final_len = sizeof(struct ether_header) + ntohs(new_ip->tot_len);
+					send_to_link(0, send_packet, final_len);
+
+					printf("ICMP Time Exceeded (Failsafe Hack) trimis!\n");
 				}
 			}
 		}

@@ -81,8 +81,6 @@ int main(int argc,char** argv) {
 				printf("[SENDER] Timeout expired! Retransmitting chunk...\n");
 				continue; 
 			}
-
-			// ... apoi retrimitem
 			struct l3_msg ack;
             memcpy(&ack, response.payload, sizeof(struct l3_msg));
 
@@ -112,6 +110,7 @@ int main(int argc,char** argv) {
 	}
 
 
+	// trimitem un ultim pachet (cu len == 0)
 	t.hdr.len = 0;
 	t.hdr.sum = 0;
 	t.hdr.sum = htonl(crc32((void *)&t, sizeof(struct l3_msg)));
