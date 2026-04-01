@@ -26,3 +26,48 @@ struct icmp_hdr {   /* are exact 8 octeti  */
 
 Ethernet Header (14B),IP Header (20B),ICMP Header (8B),ICMP Payload (Date)
 MAC-uri,"IP-uri, TTL, Protocol=1","Type, Code, Checksum",Datele de la Ping
+
+---
+
+**Unde e payload-ul în memorie:**
+```c
+uint8_t *payload = (uint8_t *)icmp_hdr + sizeof(struct icmphdr);
+```
+Pachetul în memorie arată așa:
+```
+[ Ethernet ][ IP nou ][ ICMP header ][ payload ]
+                       ^              ^
+                       icmp_hdr       icmp_hdr + 8 bytes
+```
+Deci payload-ul începe imediat după ICMP header (după 8 bytes).
+
+---
+
+**Copiem header-ele originale în payload:**
+```c
+memcpy(payload, &orig_ip, sizeof(struct iphdr));
+// payload: [ IP original (20 bytes) ]
+
+memcpy(payload + sizeof(struct iphdr), &orig_icmp, sizeof(struct icmphdr));
+// payload: [ IP original (20 bytes) ][ ICMP original (8 bytes) ]
+```
+Asta e cerința RFC 792 — Time Exceeded trebuie să conțină header-ul IP original + primii 8 bytes din datele originale, ca h0 să știe **care pachet** a cauzat eroarea.
+
+---
+
+**Checksum ICMP peste tot:**
+```c
+int icmp_total_len = sizeof(struct icmphdr) + sizeof(struct iphdr) + sizeof(struct icmphdr);
+//                 = 8 + 20 + 8 = 36 bytes
+```
+Checksumul se calculează peste **tot** — ICMP header + payload, nu doar header-ul.
+
+```c
+uint8_t *icmp_bytes = (uint8_t *)icmp_hdr;
+```
+Folosim `uint8_t*` în loc de `uint16_t*` direct ca să evităm eroarea de alignment de la `packed struct`.
+
+```c
+icmp_hdr->checksum = htons(ip_checksum((uint16_t *)icmp_bytes, icmp_total_len));
+```
+Calculăm checksum peste cei 36 bytes și îl punem în header.
