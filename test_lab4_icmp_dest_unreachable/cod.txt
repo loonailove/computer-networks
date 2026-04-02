@@ -1,0 +1,189 @@
+#include <arpa/inet.h> /* ntoh, hton and inet_ functions */
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "lib.h"
+#include "protocols.h"
+
+/* Routing table */
+struct route_table_entry *rtable;
+int rtable_len;
+
+/* Mac table */
+struct mac_entry *mac_table;
+int mac_table_len;
+
+/*
+ Returns a pointer (eg. &rtable[i]) to the best matching route, or NULL if there
+ is no matching route.
+*/
+// LPM
+struct route_table_entry *get_best_route(uint32_t ip_dest) {
+    struct route_table_entry *best = NULL;
+    for (int i = 0; i < rtable_len; i++) {
+        if ((ip_dest & rtable[i].mask) == (rtable[i].prefix & rtable[i].mask)) {
+			/* le comparam in host order */
+			/* vrem masca cea mai mare (specifica) */
+            if (best == NULL || ntohl(rtable[i].mask) > ntohl(best->mask)) {
+                best = &rtable[i];
+            }
+        }
+    }
+    return best;
+}
+
+struct mac_entry *get_mac_entry(uint32_t given_ip) {
+    for (int i = 0; i < mac_table_len; i++) {
+        if (mac_table[i].ip == given_ip) {
+            return &mac_table[i];
+        }
+    }
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+	int interface;
+	char packet[MAX_LEN];
+	int packet_len;
+
+	/* Don't touch this */
+	init();
+
+	/* Code to allocate the MAC and route tables */
+	rtable = malloc(sizeof(struct route_table_entry) * 100);
+	/* DIE is a macro for sanity checks */
+	DIE(rtable == NULL, "memory");
+
+	mac_table = malloc(sizeof(struct  mac_entry) * 100);
+	DIE(mac_table == NULL, "memory");
+	
+	/* Read the static routing table and the MAC table */
+	rtable_len = read_rtable("rtable.txt", rtable);
+	mac_table_len = read_mac_table(mac_table);
+
+	/* "event loop" - router-ul "asculta" incontinuu pt pachete noi */
+	while (1) {
+		interface = recv_from_all_links(packet, &packet_len);
+		DIE(interface < 0, "get_message");
+
+		/* extragem headerele */
+		struct ether_header *eth_hdr = (struct ether_header *) packet;
+		struct iphdr *ip_hdr = (struct iphdr *)(packet + sizeof(struct ether_header));
+		struct icmphdr *icmp_hdr = (struct icmphdr *)(packet + sizeof(struct ether_header) + sizeof(struct iphdr));
+
+		/* Ignoram non-IPv4 */
+		if (eth_hdr->ether_type != htons(ETHERTYPE_IP)) {
+			printf("Ignored non-IPv4 packet\n");
+			continue;
+		}
+
+		/* Verificam checksum IP */
+		uint16_t received_check = ip_hdr->check;
+		ip_hdr->check = 0;
+		if (ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)) != ntohs(received_check)) {
+			printf("Checksum gresit, drop pachet\n");
+			continue;
+		}
+
+		/* Doar pachete ICMP */
+		if (ip_hdr->protocol != 1) {
+			continue;
+		}
+
+		/* Aleatoriu - Destination Unreachable */
+		if (rand() % 2 == 0) {	// 50% 50%
+			printf("Trimit Destination Unreachable aleatoriu\n");
+
+			/* Salvam originalul */
+			struct iphdr orig_ip;
+			struct icmphdr orig_icmp;
+			memcpy(&orig_ip, ip_hdr, sizeof(struct iphdr));
+			memcpy(&orig_icmp, icmp_hdr, sizeof(struct icmphdr));
+
+			/* Construim pachet nou */
+			// MAX_LEN = dimensiunea maxima a unui pachet in retea
+			char new_packet[MAX_LEN];
+			memset(new_packet, 0, MAX_LEN);
+
+			struct ether_header *new_eth = (struct ether_header *) new_packet;
+			struct iphdr *new_ip = (struct iphdr *)(new_packet + sizeof(struct ether_header));
+			struct icmphdr *new_icmp = (struct icmphdr *)(new_packet + sizeof(struct ether_header) + sizeof(struct iphdr));
+			uint8_t *payload = (uint8_t *)new_icmp + sizeof(struct icmphdr);
+
+			/* Ethernet */
+			new_eth->ether_type = htons(ETHERTYPE_IP);
+			get_interface_mac(interface, new_eth->ether_shost);
+			memcpy(new_eth->ether_dhost, eth_hdr->ether_shost, 6);
+
+			/* IP */
+			new_ip->version = 4;
+			new_ip->ihl = 5;
+			new_ip->tos = 0;
+			new_ip->ttl = 64;
+			new_ip->protocol = 1;
+			new_ip->saddr = ip_hdr->daddr; /* routerul */
+			new_ip->daddr = orig_ip.saddr; /* inapoi la sursa */
+			new_ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct icmphdr) + sizeof(struct iphdr) + 8);
+			new_ip->check = 0;
+			new_ip->check = htons(ip_checksum((uint16_t *)new_ip, sizeof(struct iphdr)));
+
+			/* ICMP Destination Unreachable */
+			new_icmp->type = 3;  /* Destination Unreachable */
+			new_icmp->code = 0;  /* Network Unreachable */
+			new_icmp->id = 0;
+			new_icmp->seq = 0;
+
+			/* Payload: IP original + primii 8 bytes din datele originale */
+			memcpy(payload, &orig_ip, sizeof(struct iphdr));
+			memcpy(payload + sizeof(struct iphdr), &orig_icmp, 8);
+
+			/* Checksum ICMP */
+			int icmp_total_len = sizeof(struct icmphdr) + sizeof(struct iphdr) + 8;
+			new_icmp->check = 0;
+			uint8_t tmp[MAX_LEN];
+			memcpy(tmp, new_icmp, icmp_total_len);
+			new_icmp->check = htons(ip_checksum((uint16_t *)tmp, icmp_total_len));
+
+			int final_len = sizeof(struct ether_header) + ntohs(new_ip->tot_len);
+			send_to_link(interface, new_packet, final_len);
+
+		} else {
+			/* Forwarding normal */
+			printf("Forwarding normal\n");
+
+			/* Gasim ruta */
+			struct route_table_entry *best_route = get_best_route(ip_hdr->daddr);
+			if (best_route == NULL) {
+				printf("No route found, drop\n");
+				continue;
+			}
+
+			/* Verificam TTL */
+			if (ip_hdr->ttl <= 1) {
+				printf("TTL expirat, drop\n");
+				continue;
+			}
+
+			/* Decrementam TTL si recalculam checksum */
+			ip_hdr->ttl--;
+			ip_hdr->check = 0;
+			ip_hdr->check = htons(ip_checksum((uint16_t *)ip_hdr, sizeof(struct iphdr)));
+
+			/* Gasim MAC-ul urmatorului hop */
+			struct mac_entry *mac = get_mac_entry(best_route->next_hop);
+			if (mac == NULL) {
+				printf("No MAC found, drop\n");
+				continue;
+			}
+
+			/* Setam MAC-urile */
+			get_interface_mac(best_route->interface, eth_hdr->ether_shost);
+			memcpy(eth_hdr->ether_dhost, mac->mac, 6);
+
+			/* Trimitem */
+			send_to_link(best_route->interface, packet, packet_len);
+		}
+	}
+}
