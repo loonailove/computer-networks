@@ -47,33 +47,56 @@ void send_file_start_stop(int sockfd, struct sockaddr_in server_address,
     struct seq_udp d;
     int n = read(fd, d.payload, sizeof(d.payload));
     DIE(n < 0, "read");
+
     d.len = n;
     d.seq = seq;
-    seq++;
 
     // TODO 1.1: Send the datagram.
+    while(1) {
+      rc = sendto(sockfd, &d, sizeof(struct seq_udp) , 0,
+                  (struct sockaddr *)&server_address, sizeof(server_address));
+      DIE(rc < 0, "sendto");
 
-    // TODO 1.2: Wait for ACK before moving to the next datagram to send.
-    // If timeout or wrong seq number, resend the datagram.
+      // TODO 1.2: Wait for ACK before moving to the next datagram to send.
+      // If timeout or wrong seq number, resend the datagram.
+      int ack;
+      rc = recvfrom(sockfd, &ack, sizeof(ack), 0, NULL, NULL);
 
+      if (rc < 0) { // recvfrom failed
+        /* If we are here, it means recvfrom failed */
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+          printf("[Timeout] Resending packet with seq %d...\n", seq);
+          continue; 
+        } else {
+          DIE(1, "recvfrom error");
+        }
+      } else {
+        /* We got something! Check if it's the correct ACK */
+        if (ack == seq) {
+          // Success! Break the inner loop to move to the next chunk
+          break;
+        }
+        // If it's the wrong ACK, the loop continues and re-sends
+      }
+    }
+
+    seq++;
     if (n == 0) // end of file
       break;
   }
-}
 
-void send_file_go_back_n(int sockfd, struct sockaddr_in server_address,
-                         char *filename) {
+  close(fd); }
 
+void send_file_go_back_n(int sockfd, struct sockaddr_in server_address, char *filename) {
   int fd = open(filename, O_RDONLY);
   DIE(fd < 0, "open");
   int rc;
 
-  // TODO 2.1: Increase window size to a value that optimally uses the link
-  int window_size = 5;
-  window->max_seq = 5;
+  // TODO 2.1: Setăm fereastra
+  int window_size = 50; 
   
-  // Read the entire file in chunks and add them into a list of seq_udp (window)
-  int seq = 1;
+  // Citim tot fișierul și îl punem în listă
+  int seq = 0;
   while (1) {
     struct seq_udp *d = malloc(sizeof(struct seq_udp));
     DIE(d == NULL, "malloc");
@@ -83,21 +106,66 @@ void send_file_go_back_n(int sockfd, struct sockaddr_in server_address,
     d->len = n;
     d->seq = seq;
 
+    // Folosim funcția ta din list.h
     add_list_elem(window, d, sizeof(struct seq_udp), seq);
+    
+    if (n == 0) break; // Final de fișier
     seq++;
-
-    if (n == 0) // end of file
-      break;
   }
 
-  // TODO 2.2: Send window_size  packets to the server to saturate the link
+  int last_seq = seq;
+  int base_seq = 0;
+  int next_to_send = 1;
 
-  // In a loop, untill the list of packets is empty
+  while (base_seq <= last_seq) {
+    
+    // Trimitem pachete noi până umplem fereastra
+    while (next_to_send < base_seq + window_size && next_to_send <= last_seq) {
+      
+      // Căutăm pachetul manual în listă folosind 'head'
+      list_entry *curr = window->head;
+      struct seq_udp *p = NULL;
 
-  // TODO 2.2: On ACK remove from the list all the segments that have been ACKed
-  //           and send the next new segments added to the window
+      while (curr != NULL) {
+        if (curr->seq == next_to_send) {
+          p = (struct seq_udp *)curr->info; // info este void* în structura ta
+          break;
+        }
+        curr = curr->next;
+      }
 
-  // TODO 2.3: On timeout on recv resend all the segments from the window
+      if (p) {
+        sendto(sockfd, p, sizeof(struct seq_udp), 0,
+               (struct sockaddr *)&server_address, sizeof(server_address));
+        next_to_send++;
+      } else {
+          // Dacă nu mai găsim pachetul în listă, ieșim din bucla de trimitere
+          break;
+      }
+    }
+
+    // Așteptăm ACK
+    int ack;
+    rc = recvfrom(sockfd, &ack, sizeof(ack), 0, NULL, NULL);
+
+    if (rc < 0) {
+      // TODO 2.3: Timeout -> Resetăm next_to_send (Go-Back-N)
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        printf("[Timeout] GBN: Go Back to seq %d\n", base_seq);
+        next_to_send = base_seq; 
+      }
+    } else {
+      // TODO 2.2: ACK cumulativ
+      if (ack >= base_seq) {
+        // În acest lab, poți lăsa elementele în listă și doar să crești base_seq
+        // Glisăm fereastra
+        base_seq = ack + 1;
+      }
+    }
+  }
+
+  close(fd);
+  printf("Transfer GBN terminat!\n");
 }
 
 void send_a_message(int sockfd, struct sockaddr_in server_address) {
@@ -157,7 +225,7 @@ int main(void) {
 
   send_a_message(sockfd, servaddr);
   // send_file_start_stop(sockfd, servaddr, SENT_FILENAME);
-  // send_file_go_back_n(sockfd, servaddr, SENT_FILENAME);
+  send_file_go_back_n(sockfd, servaddr, SENT_FILENAME);
 
   close(sockfd);
 

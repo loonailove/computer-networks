@@ -21,18 +21,39 @@ int recv_seq_udp(int sockfd, struct seq_udp *seq_packet, int expected_seq) {
   struct sockaddr_in client_addr;
   socklen_t clen = sizeof(client_addr);
 
-  // Receive a segment with seq_number seq_packet->seq
+  // Primim segmentul (apel blocant)
   int rc = recvfrom(sockfd, seq_packet, sizeof(struct seq_udp), 0,
                     (struct sockaddr *)&client_addr, &clen);
+  
+  if (rc < 0) return -1; // Eroare la receptie
 
   // TODO: Check if the sequence number is the expected one.
+  if (seq_packet->seq == expected_seq) {
+    /* TODO: If we got the expected packet send ACK for it */
+    int ack = seq_packet->seq;
+    
+    printf("[Server] Got expected seq %d, sending ACK.\n", ack);
+    
+    sendto(sockfd, &ack, sizeof(ack), 0, 
+           (struct sockaddr *)&client_addr, clen);
 
-  // TODO: If we got the expected packet (by seq) send ACK for the seq.packet
-  // and return the number of bytes read. 
-  // We will increase expected_seq in the calling function (recv_a_file(...))
+    // Returnăm numărul de bytes reali de date ca să știm cât scriem în fișier
+    return seq_packet->len;
 
-  // TODO: If segment is not with the expected number, send ACK
-  // for the last well received packet (expected_seq - 1) and return -1
+  } else {
+    /* TODO: If segment is not the expected one, send ACK for the last 
+       well received packet (expected_seq - 1) */
+    int last_ack = expected_seq - 1;
+    
+    printf("[Server] Wrong seq! Got %d, expected %d. Sending ACK for %d.\n", 
+            seq_packet->seq, expected_seq, last_ack);
+
+    sendto(sockfd, &last_ack, sizeof(last_ack), 0, 
+           (struct sockaddr *)&client_addr, clen);
+
+    // Returnăm -1 pentru a-i spune funcției apelante să NU scrie în fișier
+    return -1;
+  }
 }
 
 void recv_a_file(int sockfd, char *filename) {
@@ -43,22 +64,19 @@ void recv_a_file(int sockfd, char *filename) {
   int rc;
 
   while (1) {
-    // Receive a chunk
     rc = recv_seq_udp(sockfd, &p, expected_seq);
 
-    // TODO: If rc == -1 => we didn't receive the expected segment. We continue (retry to receive the same chunk).
+    if (rc == -1) {
+      // Pachet greșit, nu facem nimic, așteptăm retransmisia
+      continue;
+    }
 
-    // TODO: If rc >=0 => we receive the expected segment. We increase expected_seq
+    // Dacă rc >= 0, înseamnă că e pachetul corect
+    if (p.len == 0) break; // Final de fișier
 
-    // An empty payload means the file ended.
-    if (p.len == 0)
-      // Break if file ended
-      break;
-
-    // Write the chunk to the file
     write(fd, p.payload, p.len);
+    expected_seq++; // Incrementăm DOAR dacă pachetul a fost cel bun
   }
-
   close(fd);
 }
 
@@ -113,7 +131,7 @@ int main(void) {
   // TODO 1.0: Study the code. Uncoment this to receive a file chuck by chuck
   // and save it locally
   recv_a_message(sockfd);
-  // recv_a_file(sockfd, SAVED_FILENAME);
+  recv_a_file(sockfd, SAVED_FILENAME);
 
   return 0;
 }
