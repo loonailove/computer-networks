@@ -1,9 +1,3 @@
-/*
- * Protocoale de comunicatii
- * Laborator 7 - TCP si mulplixare
- * client.c
- */
-
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
@@ -22,8 +16,6 @@
 
 void run_client(int sockfd) {
   char buf[MSG_MAXSIZE + 1];
-  memset(buf, 0, MSG_MAXSIZE + 1);
-
   struct chat_packet sent_packet;
   struct chat_packet recv_packet;
 
@@ -33,20 +25,34 @@ void run_client(int sockfd) {
 
     Hint: server::run_multi_chat_server
   */
-  while (fgets(buf, sizeof(buf), stdin) && !isspace(buf[0])) {
-    sent_packet.len = strlen(buf) + 1;
-    strcpy(sent_packet.message, buf);
+  struct pollfd pfds[2];
+  pfds[0].fd = STDIN_FILENO;
+  pfds[0].events = POLLIN;
+  pfds[1].fd = sockfd;
+  pfds[1].events = POLLIN;
 
-    // Trimitem pachetul la server.
-    send_all(sockfd, &sent_packet, sizeof(sent_packet));
+  while (1) {
+    int rc = poll(pfds, 2, -1);
+    DIE(rc < 0, "poll");
 
-    // Primim un mesaj de la server si il afisam.
-    int rc = recv_all(sockfd, &recv_packet, sizeof(recv_packet));
-    if (rc <= 0) {
-      break;
+    if (pfds[0].revents & POLLIN) {
+      memset(buf, 0, MSG_MAXSIZE + 1);
+      if (!fgets(buf, sizeof(buf), stdin) || isspace(buf[0])) {
+        break;
+      }
+
+      sent_packet.len = strlen(buf) + 1;
+      strcpy(sent_packet.message, buf);
+      send_all(sockfd, &sent_packet, sizeof(sent_packet));
     }
 
-    printf("%s\n", recv_packet.message);
+    if (pfds[1].revents & POLLIN) {
+      int rc = recv_all(sockfd, &recv_packet, sizeof(recv_packet));
+      if (rc <= 0) {
+        break;
+      }
+      printf("%s", recv_packet.message);
+    }
   }
 }
 
@@ -56,17 +62,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Parsam port-ul ca un numar
   uint16_t port;
   int rc = sscanf(argv[2], "%hu", &port);
   DIE(rc != 1, "Given port is invalid");
 
-  // Obtinem un socket TCP pentru conectarea la server
   const int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   DIE(sockfd < 0, "socket");
 
-  // Completăm in serv_addr adresa serverului, familia de adrese si portul
-  // pentru conectare
   struct sockaddr_in serv_addr;
   socklen_t socket_len = sizeof(struct sockaddr_in);
 
@@ -76,13 +78,11 @@ int main(int argc, char *argv[]) {
   rc = inet_pton(AF_INET, argv[1], &serv_addr.sin_addr.s_addr);
   DIE(rc <= 0, "inet_pton");
 
-  // Ne conectăm la server
   rc = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
   DIE(rc < 0, "connect");
 
   run_client(sockfd);
 
-  // Inchidem conexiunea si socketul creat
   close(sockfd);
 
   return 0;

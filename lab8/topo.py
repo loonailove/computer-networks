@@ -51,7 +51,7 @@ class NetworkTopo( Topo ):
 
         #  10 Mbps, 1ms delay, 0% packet loss
         # TODO: Change to 5ms
-        self.addLink( h3, router, intfName2='r0-eth3', bw=10, delay='1ms', loss=0,
+        self.addLink( h3, router, intfName2='r0-eth3', bw=10, delay='5ms', loss=0,
                       params2={ 'ip' : '192.168.3.1/24' } )
 
 

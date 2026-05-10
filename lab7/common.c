@@ -16,11 +16,25 @@ int recv_all(int sockfd, void *buffer, size_t len) {
       TODO: Make the magic happen
     }
   */
+  while(bytes_remaining > 0) {
+    int rc = recv(sockfd, buff + bytes_received, bytes_remaining, 0);
+    
+    // Dacă rc este 0, conexiunea a fost închisă. 
+    // Dacă este < 0, a apărut o eroare.
+    if (rc <= 0) {
+      return rc;
+    }
+    
+    bytes_received += rc;
+    bytes_remaining -= rc;
+  }
 
   /*
     TODO: Returnam exact cati octeti am citit
   */
-  return recv(sockfd, buffer, len, 0);
+  
+  //return recv(sockfd, buffer, len, 0);
+  return bytes_received;
 }
 
 /*
@@ -37,9 +51,19 @@ int send_all(int sockfd, void *buffer, size_t len) {
       TODO: Make the magic happen
     }
   */
-
+  while(bytes_remaining > 0) {
+    int rc = send(sockfd, buff + bytes_sent, bytes_remaining, 0);
+    
+    if (rc <= 0) {
+      return rc;
+    }
+    
+    bytes_sent += rc;
+    bytes_remaining -= rc;
+  }
   /*
     TODO: Returnam exact cati octeti am trimis
   */
-  return send(sockfd, buffer, len, 0);
+  //return send(sockfd, buffer, len, 0);
+  return bytes_sent;
 }
